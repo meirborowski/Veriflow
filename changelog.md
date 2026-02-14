@@ -8,3 +8,4 @@
 - docs: add security, data integrity, and code rules to CLAUDE.md constraints & policies
 - docs: add git workflow, branching strategy, and commit conventions to CLAUDE.md
 - docs: add changelog rule to CLAUDE.md
+- docs: create project_status.md with phase progress, task tracking, blockers, and decisions log
