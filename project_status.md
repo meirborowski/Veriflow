@@ -10,6 +10,7 @@
 |---|---|---|
 | Project scaffolding (client + server) | Done | Next.js 16 + NestJS 11 |
 | Documentation (spec, architecture, CLAUDE.md) | Done | |
+| Docker Compose dev environment | Done | PostgreSQL + server + client with hot-reload |
 | PostgreSQL + TypeORM setup | Not Started | |
 | Auth module (register, login, refresh, me) | Not Started | |
 | JWT strategy + guards | Not Started | |
@@ -79,3 +80,4 @@ None currently.
 | 2026-02-15 | Discard partial work on disconnect | Simplifies state management — no recovery needed |
 | 2026-02-15 | Full execution history (append-only) | Every test attempt is its own row for audit trail |
 | 2026-02-15 | Bug entity created on Fail | Separate lifecycle, linked to story + execution |
+| 2026-02-15 | Docker Compose for dev | All services (db, server, client) run via `docker compose up` with hot-reload |

@@ -26,13 +26,32 @@ In Veriflow, a **User Story** acts as both the FEATURE REQUIREMENT and the TEST 
 
 ## Getting Started
 
-### Client (Next.js)
+### Docker Compose (Recommended)
+
+Runs all services (PostgreSQL, server, client) with hot-reload:
+
+```bash
+cp .env.example .env
+docker compose up --build
+```
+
+| Service | URL |
+|---------|-----|
+| Client | http://localhost:3000 |
+| Server | http://localhost:3001 |
+| PostgreSQL | localhost:5432 |
+
+Edit source files on the host — both NestJS and Next.js hot-reload automatically.
+
+### Manual Setup
+
+#### Client (Next.js)
 ```bash
 cd client
 npm run dev
 ```
 
-### Server (NestJS)
+#### Server (NestJS)
 ```bash
 cd server
 npm run start:dev

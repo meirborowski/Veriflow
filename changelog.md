@@ -6,6 +6,8 @@
 - chore: add .env.example with all required environment variables
 - chore: add .dockerignore
 - fix: change server default port from 3000 to 3001 to match architecture spec
+- docs: add Docker dev environment section to architecture.md, README.md, CLAUDE.md
+- docs: update project_status.md with Docker Compose task completion
 - docs: create project_spec.md with full specification (vision, data model, API design, WebSocket events, logging, dev phases)
 - docs: create architecture.md (system diagram, layer responsibilities, data flows, DB schema, security, error handling, WebSocket internals)
 - docs: rewrite CLAUDE.md with structured format (goals, milestone, architecture, design guide, constraints, repo etiquette, commands, testing, docs)

@@ -199,6 +199,16 @@ test: add e2e tests for release close endpoint
 
 ## Commands
 
+### Docker (Recommended)
+| Command | Description |
+|---|---|
+| `cp .env.example .env` | Create env file from template (first time only) |
+| `docker compose up --build` | Start all services with hot-reload |
+| `docker compose up -d` | Start in background |
+| `docker compose down` | Stop all services |
+| `docker compose down -v` | Stop and remove volumes (resets DB) |
+| `docker compose logs -f server` | Tail server logs |
+
 ### Client
 | Command | Description |
 |---|---|

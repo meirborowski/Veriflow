@@ -38,7 +38,29 @@
                               └─────────────┘
 ```
 
-## 2. Server Architecture
+## 2. Development Environment
+
+```
+docker compose up --build
+  │
+  ├── db (postgres:16-alpine)
+  │     Port 5432 │ Named volume: pgdata
+  │     Health check: pg_isready
+  │
+  ├── server (node:20.12.2-alpine)
+  │     Port 3001 │ Depends on: db (healthy)
+  │     Volume: ./server → /app (hot-reload)
+  │     CMD: npm run start:dev
+  │
+  └── client (node:20.12.2-alpine)
+        Port 3000 │ Depends on: server
+        Volume: ./client → /app (hot-reload)
+        CMD: npm run dev
+```
+
+Source directories are volume-mounted into containers. Anonymous volumes preserve container `node_modules` so host and container dependencies stay independent. Edit files on the host and changes are picked up automatically.
+
+## 3. Server Architecture
 
 ### Layer Responsibilities
 
@@ -122,7 +144,7 @@ server/src/common/
         └── enums.ts                → UserRole, Priority, ReleaseStatus, TestStatus, etc.
 ```
 
-## 3. Client Architecture
+## 4. Client Architecture
 
 ### App Router Structure
 
@@ -182,7 +204,7 @@ Page (Server Component)
 - **API client**: Single `fetch` wrapper that handles token attachment, 401 → refresh → retry, error normalization.
 - **Optimistic updates**: Not required for v1. All mutations wait for server confirmation.
 
-## 4. Data Flow Diagrams
+## 5. Data Flow Diagrams
 
 ### Authentication
 
@@ -282,7 +304,7 @@ Client                          Server
   │                               │     Emit dashboard-update to room
 ```
 
-## 5. Database Schema (TypeORM Entities)
+## 6. Database Schema (TypeORM Entities)
 
 ### Entity Relationship Diagram
 
@@ -381,7 +403,7 @@ enum BugStatus {
 }
 ```
 
-## 6. Security Architecture
+## 7. Security Architecture
 
 ### Auth Flow
 
@@ -410,7 +432,7 @@ enum BugStatus {
 ### Permission Model
 All role checks happen server-side via `RolesGuard` + `@Roles()` decorator. The client hides UI elements based on role, but this is cosmetic — the server is the authority.
 
-## 7. Error Handling Architecture
+## 8. Error Handling Architecture
 
 ```
 Exception thrown in Service
@@ -441,7 +463,7 @@ HttpExceptionFilter (global)
 | Story already locked by another tester | `ConflictException` | 409 |
 | DTO validation failure | `BadRequestException` | 400 |
 
-## 8. WebSocket Architecture
+## 9. WebSocket Architecture
 
 ### Connection Lifecycle
 
