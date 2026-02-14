@@ -1,6 +1,11 @@
 # Changelog
 
 ## 2026-02-15
+- chore: add Docker Compose dev environment (PostgreSQL, server, client with hot-reload)
+- chore: add Dockerfile.dev for server and client
+- chore: add .env.example with all required environment variables
+- chore: add .dockerignore
+- fix: change server default port from 3000 to 3001 to match architecture spec
 - docs: create project_spec.md with full specification (vision, data model, API design, WebSocket events, logging, dev phases)
 - docs: create architecture.md (system diagram, layer responsibilities, data flows, DB schema, security, error handling, WebSocket internals)
 - docs: rewrite CLAUDE.md with structured format (goals, milestone, architecture, design guide, constraints, repo etiquette, commands, testing, docs)
