@@ -20,9 +20,9 @@
 #### Auth (end-to-end)
 | Task | Status | Notes |
 |---|---|---|
-| User entity | Not Started | |
-| Auth module (register, login, refresh, me) | Not Started | |
-| JWT strategy + guards | Not Started | |
+| User entity | Done | UUID PK, hashed password, hashed refresh token |
+| Auth module (register, login, refresh, me) | Done | JWT access (15m) + refresh (7d) tokens |
+| JWT strategy + guards | Done | Global JwtAuthGuard with @Public() bypass |
 | Client: auth pages (login, register) | Not Started | |
 | Client: protected route layout | Not Started | |
 
