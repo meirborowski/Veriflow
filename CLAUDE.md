@@ -172,6 +172,7 @@ Format: `<type>/<short-description>`
 
 ### Rules
 - **Never push directly to `main`** — all changes go through `develop` first.
+- **Never commit directly to `develop`** — always create a new branch (`feat/`, `fix/`, `chore/`, etc.) off `develop` for every change, no matter how small. Commit to the branch, push, and merge via PR.
 - **`develop` → `main`** only via PR when a milestone/phase is stable and tested.
 - **Feature branches** branch off `develop` and merge back into `develop` via PR.
 - **Keep branches short-lived** — merge frequently, delete after merge.
