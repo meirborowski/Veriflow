@@ -115,6 +115,7 @@ Bug severity follows the same heat scale: `Critical` = red, `Major` = orange, `M
 - **Test execution rows are append-only** — never update a completed execution; create a new attempt.
 
 ### Code Rules
+- **Minimal changes only** — touch only what is necessary to complete the task. Do not refactor, restyle, reformat, or "improve" surrounding code. No drive-by cleanups, no adding comments/docstrings to untouched code, no reorganizing imports or files that aren't part of the change. If it works and isn't broken, leave it alone.
 - **Package Manager**: npm only.
 - **Node.js**: v20.12.2.
 - **Error Handling**: NestJS exception filters + proper HTTP status codes. No silent catches.
