@@ -6,38 +6,60 @@
 ## Phase Progress
 
 ### Phase 1 — Foundation
+
+#### Infrastructure
 | Task | Status | Notes |
 |---|---|---|
 | Project scaffolding (client + server) | Done | Next.js 16 + NestJS 11 |
 | Documentation (spec, architecture, CLAUDE.md) | Done | |
 | Docker Compose dev environment | Done | PostgreSQL + server + client with hot-reload |
-| PostgreSQL + TypeORM setup | Not Started | |
+| PostgreSQL + TypeORM setup | Done | TypeORM + ConfigModule + shared enums |
+| Global validation pipe | Done | class-validator, whitelist + forbidNonWhitelisted |
+| Global exception filter | Done | Standardized error shape, 500 catch-all |
+
+#### Auth (end-to-end)
+| Task | Status | Notes |
+|---|---|---|
+| User entity | Not Started | |
 | Auth module (register, login, refresh, me) | Not Started | |
 | JWT strategy + guards | Not Started | |
-| User entity | Not Started | |
-| Project CRUD | Not Started | |
-| Project member management (invite, role, remove) | Not Started | |
-| Roles guard + @Roles() decorator | Not Started | |
-| User Story CRUD + verification steps | Not Started | |
-| Global validation pipe | Not Started | |
-| Global exception filter | Not Started | |
 | Client: auth pages (login, register) | Not Started | |
 | Client: protected route layout | Not Started | |
+
+#### Projects (end-to-end)
+| Task | Status | Notes |
+|---|---|---|
+| Project CRUD | Not Started | |
+| Roles guard + @Roles() decorator | Not Started | |
+| Project member management (invite, role, remove) | Not Started | |
 | Client: project list + detail pages | Not Started | |
+
+#### User Stories (end-to-end)
+| Task | Status | Notes |
+|---|---|---|
+| User Story CRUD + verification steps | Not Started | |
 | Client: story list + create/edit pages | Not Started | |
 
 ### Phase 2 — Release Engine
+
+#### Releases (end-to-end)
 | Task | Status | Notes |
 |---|---|---|
 | Release CRUD (draft state) | Not Started | |
 | Story-to-release scoping (add/remove) | Not Started | |
 | Release close → snapshot creation | Not Started | Transaction: copy stories + steps |
-| Release dashboard (read-only frozen scope) | Not Started | |
 | Client: release list + detail pages | Not Started | |
 | Client: release scoping UI | Not Started | |
+
+#### Release Dashboard (end-to-end)
+| Task | Status | Notes |
+|---|---|---|
+| Release dashboard (read-only frozen scope) | Not Started | |
 | Client: release dashboard | Not Started | |
 
 ### Phase 3 — Test Runner
+
+#### Real-time Test Execution (end-to-end)
 | Task | Status | Notes |
 |---|---|---|
 | WebSocket gateway setup | Not Started | Socket.io + NestJS Gateway |
@@ -52,6 +74,8 @@
 | Client: real-time presence | Not Started | |
 
 ### Phase 4 — Defect Tracking
+
+#### Bug Management (end-to-end)
 | Task | Status | Notes |
 |---|---|---|
 | Bug entity + CRUD | Not Started | |
