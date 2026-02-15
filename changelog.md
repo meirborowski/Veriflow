@@ -1,5 +1,15 @@
 # Changelog
 
+## 2026-02-15 (Auth)
+- feat: add User entity with UUID PK, hashed password, hashed refresh token
+- feat: add auth module (register, login, refresh, me) with JWT access + refresh tokens
+- feat: add JWT strategy (passport-jwt) with Bearer token extraction
+- feat: add JwtAuthGuard as global APP_GUARD with @Public() bypass
+- feat: add @CurrentUser() param decorator for extracting authenticated user
+- feat: add rate limiting on auth endpoints via @nestjs/throttler
+- feat: enable CORS with CLIENT_URL origin
+- test: add 19 unit tests for auth service, controller, strategy, guard, decorators
+
 ## 2026-02-15 (Infrastructure)
 - feat: add PostgreSQL + TypeORM connection with ConfigModule
 - feat: add global ValidationPipe with whitelist, forbidNonWhitelisted, field-level errors
