@@ -31,4 +31,16 @@ describe('JwtStrategy', () => {
       });
     });
   });
+
+  describe('constructor', () => {
+    it('should throw if JWT_SECRET is not set', () => {
+      const missingConfig = {
+        get: jest.fn().mockReturnValue(undefined),
+      };
+
+      expect(() => new JwtStrategy(missingConfig as never)).toThrow(
+        'JWT_SECRET environment variable is not set',
+      );
+    });
+  });
 });

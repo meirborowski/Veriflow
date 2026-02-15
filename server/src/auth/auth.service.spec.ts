@@ -20,8 +20,14 @@ const mockUser: User = {
   email: 'test@example.com',
   password: 'hashedpassword',
   name: 'Test User',
-  refreshToken: 'hashedrefreshtoken',
+  refreshTokenHash: 'hashedrefreshtoken',
   createdAt: new Date('2025-01-01'),
+};
+
+const mockQueryBuilder = {
+  addSelect: jest.fn().mockReturnThis(),
+  where: jest.fn().mockReturnThis(),
+  getOne: jest.fn(),
 };
 
 const mockRepository = {
@@ -29,6 +35,7 @@ const mockRepository = {
   create: jest.fn(),
   save: jest.fn(),
   update: jest.fn(),
+  createQueryBuilder: jest.fn().mockReturnValue(mockQueryBuilder),
 };
 
 const mockJwtService = {
@@ -62,11 +69,14 @@ describe('AuthService', () => {
     service = module.get<AuthService>(AuthService);
 
     jest.clearAllMocks();
+    mockRepository.createQueryBuilder.mockReturnValue(mockQueryBuilder);
+    mockQueryBuilder.addSelect.mockReturnThis();
+    mockQueryBuilder.where.mockReturnThis();
   });
 
   describe('register', () => {
     const dto = {
-      email: 'new@example.com',
+      email: 'New@Example.com',
       password: 'Pass1234',
       name: 'New User',
     };
@@ -74,8 +84,15 @@ describe('AuthService', () => {
     it('should register a new user and return tokens', async () => {
       mockRepository.findOne.mockResolvedValue(null);
       (mockBcrypt.hash as jest.Mock).mockResolvedValueOnce('hashedpass');
-      mockRepository.create.mockReturnValue({ ...dto, password: 'hashedpass' });
-      mockRepository.save.mockResolvedValue({ ...mockUser, email: dto.email });
+      mockRepository.create.mockReturnValue({
+        ...dto,
+        email: 'new@example.com',
+        password: 'hashedpass',
+      });
+      mockRepository.save.mockResolvedValue({
+        ...mockUser,
+        email: 'new@example.com',
+      });
       mockJwtService.signAsync
         .mockResolvedValueOnce('access-token')
         .mockResolvedValueOnce('refresh-token');
@@ -89,10 +106,11 @@ describe('AuthService', () => {
         refreshToken: 'refresh-token',
       });
       expect(mockRepository.findOne).toHaveBeenCalledWith({
-        where: { email: dto.email },
+        where: { email: 'new@example.com' },
       });
-      expect(mockBcrypt.hash).toHaveBeenCalledWith(dto.password, 10);
-      expect(mockRepository.save).toHaveBeenCalled();
+      expect(mockRepository.create).toHaveBeenCalledWith(
+        expect.objectContaining({ email: 'new@example.com' }),
+      );
     });
 
     it('should throw ConflictException if email exists', async () => {
@@ -100,13 +118,40 @@ describe('AuthService', () => {
 
       await expect(service.register(dto)).rejects.toThrow(ConflictException);
     });
+
+    it('should throw ConflictException on unique constraint violation (race condition)', async () => {
+      mockRepository.findOne.mockResolvedValue(null);
+      (mockBcrypt.hash as jest.Mock).mockResolvedValueOnce('hashedpass');
+      mockRepository.create.mockReturnValue({
+        ...dto,
+        email: 'new@example.com',
+        password: 'hashedpass',
+      });
+      mockRepository.save.mockRejectedValue({ code: '23505' });
+
+      await expect(service.register(dto)).rejects.toThrow(ConflictException);
+    });
+
+    it('should rethrow non-unique-constraint errors', async () => {
+      mockRepository.findOne.mockResolvedValue(null);
+      (mockBcrypt.hash as jest.Mock).mockResolvedValueOnce('hashedpass');
+      mockRepository.create.mockReturnValue({
+        ...dto,
+        email: 'new@example.com',
+        password: 'hashedpass',
+      });
+      const dbError = new Error('connection lost');
+      mockRepository.save.mockRejectedValue(dbError);
+
+      await expect(service.register(dto)).rejects.toThrow('connection lost');
+    });
   });
 
   describe('login', () => {
-    const dto = { email: 'test@example.com', password: 'Pass1234' };
+    const dto = { email: 'Test@Example.com', password: 'Pass1234' };
 
     it('should return tokens for valid credentials', async () => {
-      mockRepository.findOne.mockResolvedValue(mockUser);
+      mockQueryBuilder.getOne.mockResolvedValue(mockUser);
       (mockBcrypt.compare as jest.Mock).mockResolvedValue(true);
       mockJwtService.signAsync
         .mockResolvedValueOnce('access-token')
@@ -120,16 +165,20 @@ describe('AuthService', () => {
         accessToken: 'access-token',
         refreshToken: 'refresh-token',
       });
+      expect(mockQueryBuilder.where).toHaveBeenCalledWith(
+        'user.email = :email',
+        { email: 'test@example.com' },
+      );
     });
 
     it('should throw UnauthorizedException if user not found', async () => {
-      mockRepository.findOne.mockResolvedValue(null);
+      mockQueryBuilder.getOne.mockResolvedValue(null);
 
       await expect(service.login(dto)).rejects.toThrow(UnauthorizedException);
     });
 
     it('should throw UnauthorizedException if password is invalid', async () => {
-      mockRepository.findOne.mockResolvedValue(mockUser);
+      mockQueryBuilder.getOne.mockResolvedValue(mockUser);
       (mockBcrypt.compare as jest.Mock).mockResolvedValue(false);
 
       await expect(service.login(dto)).rejects.toThrow(UnauthorizedException);
@@ -144,7 +193,7 @@ describe('AuthService', () => {
         sub: mockUser.id,
         email: mockUser.email,
       });
-      mockRepository.findOne.mockResolvedValue(mockUser);
+      mockQueryBuilder.getOne.mockResolvedValue(mockUser);
       (mockBcrypt.compare as jest.Mock).mockResolvedValue(true);
       mockJwtService.signAsync
         .mockResolvedValueOnce('new-access')
@@ -173,7 +222,7 @@ describe('AuthService', () => {
         sub: mockUser.id,
         email: mockUser.email,
       });
-      mockRepository.findOne.mockResolvedValue(null);
+      mockQueryBuilder.getOne.mockResolvedValue(null);
 
       await expect(service.refresh(dto)).rejects.toThrow(UnauthorizedException);
     });
@@ -183,9 +232,9 @@ describe('AuthService', () => {
         sub: mockUser.id,
         email: mockUser.email,
       });
-      mockRepository.findOne.mockResolvedValue({
+      mockQueryBuilder.getOne.mockResolvedValue({
         ...mockUser,
-        refreshToken: null,
+        refreshTokenHash: null,
       });
 
       await expect(service.refresh(dto)).rejects.toThrow(UnauthorizedException);
@@ -196,7 +245,7 @@ describe('AuthService', () => {
         sub: mockUser.id,
         email: mockUser.email,
       });
-      mockRepository.findOne.mockResolvedValue(mockUser);
+      mockQueryBuilder.getOne.mockResolvedValue(mockUser);
       (mockBcrypt.compare as jest.Mock).mockResolvedValue(false);
 
       await expect(service.refresh(dto)).rejects.toThrow(UnauthorizedException);

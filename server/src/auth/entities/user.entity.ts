@@ -13,14 +13,14 @@ export class User {
   @Column({ unique: true })
   email: string;
 
-  @Column()
+  @Column({ select: false })
   password: string;
 
   @Column()
   name: string;
 
-  @Column({ type: 'varchar', nullable: true })
-  refreshToken: string | null;
+  @Column({ type: 'varchar', nullable: true, select: false })
+  refreshTokenHash: string | null;
 
   @CreateDateColumn({ type: 'timestamptz' })
   createdAt: Date;
