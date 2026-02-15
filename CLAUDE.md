@@ -179,6 +179,7 @@ Format: `<type>/<short-description>`
 - **Feature branches** branch off `develop` and merge back into `develop` via PR.
 - **Keep branches short-lived** — merge frequently, delete after merge.
 - **Rebase feature branches** on `develop` before opening a PR to keep history clean.
+- **Linear history only** — always merge PRs with `--rebase` (or `--squash`). Never use `--merge`. No merge commits.
 
 ### Commit Messages
 Format: `<type>: <short summary>`
