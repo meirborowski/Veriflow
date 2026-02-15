@@ -1,6 +1,7 @@
 # Changelog
 
 ## 2026-02-15
+- chore: clean up template scaffolding from Next.js and NestJS
 - chore: add Docker Compose dev environment (PostgreSQL, server, client with hot-reload)
 - chore: add Dockerfile.dev for server and client
 - chore: add .env.example with all required environment variables
