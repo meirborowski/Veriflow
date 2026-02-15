@@ -27,20 +27,41 @@ export interface UserProfile {
   createdAt: Date;
 }
 
+interface DatabaseError {
+  code?: string;
+}
+
 @Injectable()
 export class AuthService {
   private readonly logger = new Logger(AuthService.name);
+  private readonly jwtSecret: string;
+  private readonly jwtRefreshSecret: string;
 
   constructor(
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
-  ) {}
+  ) {
+    const jwtSecret = this.configService.get<string>('JWT_SECRET');
+    const jwtRefreshSecret =
+      this.configService.get<string>('JWT_REFRESH_SECRET');
+
+    if (!jwtSecret || !jwtRefreshSecret) {
+      throw new Error(
+        'JWT_SECRET and JWT_REFRESH_SECRET environment variables must be set',
+      );
+    }
+
+    this.jwtSecret = jwtSecret;
+    this.jwtRefreshSecret = jwtRefreshSecret;
+  }
 
   async register(dto: RegisterDto): Promise<TokenPair> {
+    const email = dto.email.toLowerCase().trim();
+
     const existing = await this.userRepository.findOne({
-      where: { email: dto.email },
+      where: { email },
     });
 
     if (existing) {
@@ -50,12 +71,21 @@ export class AuthService {
     const hashedPassword = await bcrypt.hash(dto.password, 10);
 
     const user = this.userRepository.create({
-      email: dto.email,
+      email,
       password: hashedPassword,
       name: dto.name,
     });
 
-    const savedUser = await this.userRepository.save(user);
+    let savedUser: User;
+    try {
+      savedUser = await this.userRepository.save(user);
+    } catch (error: unknown) {
+      if ((error as DatabaseError).code === '23505') {
+        throw new ConflictException('Email already registered');
+      }
+      throw error;
+    }
+
     const tokens = await this.generateTokens(savedUser.id, savedUser.email);
     await this.updateRefreshToken(savedUser.id, tokens.refreshToken);
 
@@ -65,9 +95,13 @@ export class AuthService {
   }
 
   async login(dto: LoginDto): Promise<TokenPair> {
-    const user = await this.userRepository.findOne({
-      where: { email: dto.email },
-    });
+    const email = dto.email.toLowerCase().trim();
+
+    const user = await this.userRepository
+      .createQueryBuilder('user')
+      .addSelect('user.password')
+      .where('user.email = :email', { email })
+      .getOne();
 
     if (!user) {
       throw new UnauthorizedException('Invalid credentials');
@@ -92,23 +126,25 @@ export class AuthService {
 
     try {
       payload = this.jwtService.verify(dto.refreshToken, {
-        secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
+        secret: this.jwtRefreshSecret,
       });
     } catch {
       throw new UnauthorizedException('Invalid refresh token');
     }
 
-    const user = await this.userRepository.findOne({
-      where: { id: payload.sub },
-    });
+    const user = await this.userRepository
+      .createQueryBuilder('user')
+      .addSelect('user.refreshTokenHash')
+      .where('user.id = :id', { id: payload.sub })
+      .getOne();
 
-    if (!user || !user.refreshToken) {
+    if (!user || !user.refreshTokenHash) {
       throw new UnauthorizedException('Invalid refresh token');
     }
 
     const tokenValid = await bcrypt.compare(
       dto.refreshToken,
-      user.refreshToken,
+      user.refreshTokenHash,
     );
 
     if (!tokenValid) {
@@ -146,11 +182,11 @@ export class AuthService {
 
     const [accessToken, refreshToken] = await Promise.all([
       this.jwtService.signAsync(payload, {
-        secret: this.configService.get<string>('JWT_SECRET'),
+        secret: this.jwtSecret,
         expiresIn: '15m',
       }),
       this.jwtService.signAsync(payload, {
-        secret: this.configService.get<string>('JWT_REFRESH_SECRET'),
+        secret: this.jwtRefreshSecret,
         expiresIn: '7d',
       }),
     ]);
@@ -163,6 +199,8 @@ export class AuthService {
     refreshToken: string,
   ): Promise<void> {
     const hashedToken = await bcrypt.hash(refreshToken, 10);
-    await this.userRepository.update(userId, { refreshToken: hashedToken });
+    await this.userRepository.update(userId, {
+      refreshTokenHash: hashedToken,
+    });
   }
 }
