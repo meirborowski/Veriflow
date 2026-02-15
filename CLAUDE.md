@@ -125,6 +125,8 @@ Bug severity follows the same heat scale: `Critical` = red, `Major` = orange, `M
 - **Logging**: NestJS `Logger` per module. Log business events at `log` level.
 - **No `any` types** — use proper TypeScript types everywhere. `unknown` over `any` when type is uncertain.
 - **No business logic in controllers** — controllers validate input and delegate to services.
+- **Always add unit tests** — every new service method, guard, pipe, or non-trivial utility must have corresponding unit tests in a colocated `*.spec.ts` file. No new code without tests.
+- **Never modify existing tests unless the underlying logic changed** — if the production code behavior is unchanged, its tests must remain untouched. Do not "fix", reformat, or "improve" passing tests as part of an unrelated change.
 
 ### Naming Conventions
 
