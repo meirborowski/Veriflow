@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-02-15 (Infrastructure)
+- feat: add PostgreSQL + TypeORM connection with ConfigModule
+- feat: add global ValidationPipe with whitelist, forbidNonWhitelisted, field-level errors
+- feat: add global HttpExceptionFilter with standardized error shape
+- feat: add shared enums (UserRole, Priority, StoryStatus, ReleaseStatus, TestStatus, StepStatus, BugSeverity, BugStatus)
+- feat: add pagination types (PaginatedResponse, PaginationMeta)
+- feat: set global API prefix `/api/v1` (excluding `/health`)
+- test: add 11 unit tests for ValidationPipe and HttpExceptionFilter
+
 ## 2026-02-15
 - chore: clean up template scaffolding from Next.js and NestJS
 - chore: add Docker Compose dev environment (PostgreSQL, server, client with hot-reload)
