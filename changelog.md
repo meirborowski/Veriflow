@@ -1,5 +1,29 @@
 # Changelog
 
+## 2026-02-16 (Auth Client)
+- feat: add API client with token refresh and 401 retry logic
+- feat: add AuthProvider context with login, register, logout, and session restore
+- feat: add TanStack Query provider for server state management
+- feat: add login page with email/password form and error display
+- feat: add register page with name/email/password form and validation hints
+- feat: add dashboard layout with sidebar navigation and user info
+- feat: add auth layout with centered card and redirect for authenticated users
+- feat: add projects placeholder page with empty state
+- feat: add root redirect to /projects
+- chore: install Shadcn/UI (button, input, label, card, sonner), lucide-react, @tanstack/react-query
+
+## 2026-02-16 (Projects Backend)
+- feat: add Project entity with UUID PK, name, description, timestamps
+- feat: add ProjectMember entity with composite PK (userId + projectId), role, join date
+- feat: add @Roles() decorator and RolesGuard for per-project role-based access control
+- feat: add projects service with 8 methods (CRUD + member management)
+- feat: add projects controller with 8 endpoints under /projects
+- feat: add DTOs for project create/update, member add/update, and pagination
+- feat: add PaginationQueryDto with class-transformer for query parsing
+- test: add 8 unit tests for RolesGuard
+- test: add 20 unit tests for ProjectsService
+- test: add 8 unit tests for ProjectsController
+
 ## 2026-02-15 (Auth)
 - feat: add User entity with UUID PK, hashed password, hashed refresh token
 - feat: add auth module (register, login, refresh, me) with JWT access + refresh tokens
