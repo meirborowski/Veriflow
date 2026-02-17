@@ -215,6 +215,18 @@ export class ProjectsService {
       throw new NotFoundException('Member not found');
     }
 
+    if (member.role === UserRole.ADMIN && dto.role !== UserRole.ADMIN) {
+      const adminCount = await this.memberRepository.count({
+        where: { projectId, role: UserRole.ADMIN },
+      });
+
+      if (adminCount <= 1) {
+        throw new BadRequestException(
+          'Cannot demote the last admin of a project',
+        );
+      }
+    }
+
     member.role = dto.role;
     const updated = await this.memberRepository.save(member);
 

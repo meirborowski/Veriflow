@@ -15,29 +15,41 @@ interface RefreshResponse {
   refreshToken: string;
 }
 
+let refreshPromise: Promise<string | null> | null = null;
+
 async function refreshAccessToken(): Promise<string | null> {
-  const refreshToken = localStorage.getItem('refreshToken');
-  if (!refreshToken) return null;
+  if (refreshPromise) return refreshPromise;
 
-  try {
-    const res = await fetch(`${BASE_URL}/auth/refresh`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ refreshToken }),
-    });
+  refreshPromise = (async () => {
+    const refreshToken = localStorage.getItem('refreshToken');
+    if (!refreshToken) return null;
 
-    if (!res.ok) {
+    try {
+      const res = await fetch(`${BASE_URL}/auth/refresh`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refreshToken }),
+      });
+
+      if (!res.ok) {
+        localStorage.removeItem('refreshToken');
+        return null;
+      }
+
+      const data: RefreshResponse = await res.json();
+      accessToken = data.accessToken;
+      localStorage.setItem('refreshToken', data.refreshToken);
+      return data.accessToken;
+    } catch {
       localStorage.removeItem('refreshToken');
       return null;
     }
+  })();
 
-    const data: RefreshResponse = await res.json();
-    accessToken = data.accessToken;
-    localStorage.setItem('refreshToken', data.refreshToken);
-    return data.accessToken;
-  } catch {
-    localStorage.removeItem('refreshToken');
-    return null;
+  try {
+    return await refreshPromise;
+  } finally {
+    refreshPromise = null;
   }
 }
 
