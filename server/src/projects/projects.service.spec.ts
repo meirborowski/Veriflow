@@ -296,6 +296,41 @@ describe('ProjectsService', () => {
         }),
       ).rejects.toThrow(NotFoundException);
     });
+
+    it('should throw BadRequestException when demoting the last admin', async () => {
+      const member = {
+        userId: 'user-1',
+        projectId: 'proj-1',
+        role: UserRole.ADMIN,
+      };
+      mockMemberRepo.findOne.mockResolvedValue(member);
+      mockMemberRepo.count.mockResolvedValue(1);
+
+      await expect(
+        service.updateMemberRole('proj-1', 'user-1', {
+          role: UserRole.DEVELOPER,
+        }),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should allow demoting an admin when other admins exist', async () => {
+      const member = {
+        userId: 'user-2',
+        projectId: 'proj-1',
+        role: UserRole.ADMIN,
+      };
+      mockMemberRepo.findOne.mockResolvedValue(member);
+      mockMemberRepo.count.mockResolvedValue(2);
+      mockMemberRepo.save.mockResolvedValue({
+        ...member,
+        role: UserRole.DEVELOPER,
+      });
+
+      const result = await service.updateMemberRole('proj-1', 'user-2', {
+        role: UserRole.DEVELOPER,
+      });
+      expect(result.role).toBe(UserRole.DEVELOPER);
+    });
   });
 
   describe('removeMember', () => {

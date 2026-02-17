@@ -5,6 +5,7 @@ import {
   JoinColumn,
   CreateDateColumn,
   PrimaryColumn,
+  Index,
 } from 'typeorm';
 import { UserRole } from '../../common/types/enums';
 import { Project } from './project.entity';
@@ -16,6 +17,7 @@ export class ProjectMember {
   userId: string;
 
   @PrimaryColumn('uuid')
+  @Index()
   projectId: string;
 
   @Column({ type: 'enum', enum: UserRole })
