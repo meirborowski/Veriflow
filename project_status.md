@@ -23,15 +23,15 @@
 | User entity | Done | UUID PK, hashed password, hashed refresh token |
 | Auth module (register, login, refresh, me) | Done | JWT access (15m) + refresh (7d) tokens |
 | JWT strategy + guards | Done | Global JwtAuthGuard with @Public() bypass |
-| Client: auth pages (login, register) | Not Started | |
-| Client: protected route layout | Not Started | |
+| Client: auth pages (login, register) | Done | Shadcn/UI forms, API client with token refresh |
+| Client: protected route layout | Done | Sidebar nav, auth redirect, skeleton loading |
 
 #### Projects (end-to-end)
 | Task | Status | Notes |
 |---|---|---|
-| Project CRUD | Not Started | |
-| Roles guard + @Roles() decorator | Not Started | |
-| Project member management (invite, role, remove) | Not Started | |
+| Project CRUD | Done | Create, list (paginated), get, update, delete |
+| Roles guard + @Roles() decorator | Done | Per-project role check via ProjectMember lookup |
+| Project member management (invite, role, remove) | Done | Add by email, update role, prevent last-admin removal |
 | Client: project list + detail pages | Not Started | |
 
 #### User Stories (end-to-end)
