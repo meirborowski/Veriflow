@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-02-17
+- fix: prevent demoting last admin via updateMemberRole (was allowing project to lose all admins)
+- fix: add refresh promise lock to prevent concurrent 401s from triggering multiple token refreshes
+- feat: add @MaxLength(2000) to description field in CreateProjectDto and UpdateProjectDto
+- feat: add @Index() on projectId in ProjectMember entity for efficient lookups
+- test: add 2 unit tests for last-admin demotion guard in updateMemberRole (23 total)
+
 ## 2026-02-16 (Auth Client)
 - feat: add API client with token refresh and 401 retry logic
 - feat: add AuthProvider context with login, register, logout, and session restore
