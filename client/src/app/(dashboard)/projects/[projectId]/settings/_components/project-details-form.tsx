@@ -31,7 +31,7 @@ export function ProjectDetailsForm({
 
     updateProject.mutate({
       name: trimmedName,
-      description: description.trim() || undefined,
+      description: description.trim(),
     });
   }
 

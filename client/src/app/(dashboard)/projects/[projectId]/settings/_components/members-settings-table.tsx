@@ -109,6 +109,8 @@ export function MembersSettingsTable({
                         variant="ghost"
                         size="icon-sm"
                         onClick={() => setRemoveTarget(member)}
+                        aria-label={`Remove ${member.name} from project`}
+                        title={`Remove ${member.name}`}
                       >
                         <Trash2 className="h-4 w-4 text-muted-foreground" />
                       </Button>
@@ -133,6 +135,7 @@ export function MembersSettingsTable({
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleRemove}
+              disabled={removeMember.isPending}
               className="bg-destructive text-white hover:bg-destructive/90"
             >
               {removeMember.isPending ? 'Removing...' : 'Remove'}

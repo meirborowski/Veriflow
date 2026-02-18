@@ -57,7 +57,11 @@ export default function ProjectDetailPage({
         <h1 className="text-2xl font-semibold tracking-tight">{project.name}</h1>
         {isAdmin && (
           <Button variant="outline" size="icon" asChild>
-            <Link href={`/projects/${projectId}/settings`}>
+            <Link
+              href={`/projects/${projectId}/settings`}
+              aria-label="Project settings"
+              title="Project settings"
+            >
               <Settings className="h-4 w-4" />
             </Link>
           </Button>
