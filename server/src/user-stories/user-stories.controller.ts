@@ -42,6 +42,8 @@ export class UserStoriesController {
   }
 
   @Get('stories/:id')
+  @Roles(UserRole.ADMIN, UserRole.PM, UserRole.DEVELOPER, UserRole.TESTER)
+  @ResolveProjectFrom('story')
   findOne(@Param('id') id: string) {
     return this.userStoriesService.findOne(id);
   }
