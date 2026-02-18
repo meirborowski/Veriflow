@@ -37,8 +37,10 @@
 #### User Stories (end-to-end)
 | Task | Status | Notes |
 |---|---|---|
-| User Story CRUD + verification steps | Not Started | |
-| Client: story list + create/edit pages | Not Started | |
+| User Story CRUD + verification steps | Done | Entities, service, controller, DTOs, step sync, filters |
+| RolesGuard adaptation for story routes | Done | @ResolveProjectFrom('story') + projectId param fallback |
+| Client: story list + create/edit pages | Done | List with filters, create form, detail/edit with step builder |
+| Unit tests (service, controller, guard) | Done | 29 new tests (102 total) |
 
 ### Phase 2 — Release Engine
 

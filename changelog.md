@@ -1,6 +1,22 @@
 # Changelog
 
 ## 2026-02-18
+- feat: add User Story and VerificationStep entities with TypeORM relations
+- feat: add user stories service with CRUD, step sync algorithm, pagination, and filtering
+- feat: add user stories controller with project-scoped and story-scoped routes
+- feat: add DTOs for story create/update, step create/update, and story query with filters
+- feat: add @ResolveProjectFrom('story') decorator for story-based project resolution in RolesGuard
+- feat: adapt RolesGuard to support params.projectId fallback and story-based project lookup
+- feat: add client types, TanStack Query hooks for story CRUD (list, detail, create, update, delete)
+- feat: add stories list page with status/priority filters, search, pagination, and empty state
+- feat: add create story page with step builder component
+- feat: add story detail page with edit mode and step builder
+- feat: add PriorityBadge and StatusBadge shared components
+- feat: add "User Stories" navigation link on project detail page
+- test: add 20 unit tests for UserStoriesService (CRUD, step sync, filters)
+- test: add 5 unit tests for UserStoriesController
+- test: add 4 unit tests for RolesGuard (projectId fallback, story resolution)
+
 - feat: add projects list page with table, pagination, and empty state
 - feat: add create project dialog with name and description form
 - feat: add project detail page with breadcrumbs and members table
