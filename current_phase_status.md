@@ -154,12 +154,12 @@ Auth (JWT), Project CRUD, User Story CRUD, Role-based access control — built e
 ### 3.4 Client: project list + detail pages
 | # | Task | Status |
 |---|---|---|
-| 1 | Create `projects/page.tsx` — table of user's projects (name, role, created date) | In Progress |
-| 2 | Empty state: "No projects yet. Create one." + button | In Progress |
-| 3 | Create project dialog/page — name + description form | Not Started |
-| 4 | Create `projects/[projectId]/page.tsx` — project overview with members list | Not Started |
-| 5 | Create `projects/[projectId]/settings/page.tsx` — member management (invite, change role, remove) | Not Started |
-| 6 | Skeleton loading states for all views | Not Started |
+| 1 | Create `projects/page.tsx` — table of user's projects (name, role, created date) | Done |
+| 2 | Empty state: "No projects yet. Create one." + button | Done |
+| 3 | Create project dialog/page — name + description form | Done |
+| 4 | Create `projects/[projectId]/page.tsx` — project overview with members list | Done |
+| 5 | Create `projects/[projectId]/settings/page.tsx` — member management (invite, change role, remove) | Done |
+| 6 | Skeleton loading states for all views | Done |
 
 ---
 
