@@ -32,7 +32,7 @@
 | Project CRUD | Done | Create, list (paginated), get, update, delete |
 | Roles guard + @Roles() decorator | Done | Per-project role check via ProjectMember lookup |
 | Project member management (invite, role, remove) | Done | Add by email, update role, prevent last-admin removal |
-| Client: project list + detail pages | Not Started | |
+| Client: project list + detail pages | Done | Table, create dialog, detail, settings, member mgmt |
 
 #### User Stories (end-to-end)
 | Task | Status | Notes |

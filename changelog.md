@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-02-18
+- feat: add projects list page with table, pagination, and empty state
+- feat: add create project dialog with name and description form
+- feat: add project detail page with breadcrumbs and members table
+- feat: add project settings page (edit details, invite members, change roles, remove members, delete project)
+- feat: add skeleton loading states for all project views
+- feat: add TanStack Query hooks for all project CRUD and member management endpoints
+- feat: add shared components (breadcrumbs, role badge, pagination)
+- feat: add project TypeScript types matching backend API shapes
+- chore: install shadcn components (dialog, table, dropdown-menu, badge, select, skeleton, textarea, separator, alert-dialog)
+
 ## 2026-02-17
 - fix: prevent demoting last admin via updateMemberRole (was allowing project to lose all admins)
 - fix: add refresh promise lock to prevent concurrent 401s from triggering multiple token refreshes
