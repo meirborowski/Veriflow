@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { NotFoundException, BadRequestException } from '@nestjs/common';
+import { DataSource } from 'typeorm';
 import { UserStoriesService } from './user-stories.service';
 import { UserStory } from './entities/user-story.entity';
 import { VerificationStep } from './entities/verification-step.entity';
@@ -21,7 +22,22 @@ describe('UserStoriesService', () => {
     create: jest.fn(),
     save: jest.fn(),
     delete: jest.fn(),
-    update: jest.fn(),
+  };
+
+  // Transaction mock: the manager returns the same mock repos via getRepository
+  const mockManager = {
+    getRepository: jest.fn((entity: unknown) => {
+      if (entity === UserStory) return mockStoryRepo;
+      if (entity === VerificationStep) return mockStepRepo;
+      return {};
+    }),
+  };
+
+  const mockDataSource = {
+    transaction: jest.fn(
+      (cb: (manager: typeof mockManager) => Promise<unknown>) =>
+        cb(mockManager),
+    ),
   };
 
   beforeEach(async () => {
@@ -33,15 +49,23 @@ describe('UserStoriesService', () => {
           provide: getRepositoryToken(VerificationStep),
           useValue: mockStepRepo,
         },
+        { provide: DataSource, useValue: mockDataSource },
       ],
     }).compile();
 
     service = module.get<UserStoriesService>(UserStoriesService);
     jest.clearAllMocks();
+
+    // Re-setup getRepository after clearAllMocks
+    mockManager.getRepository.mockImplementation((entity: unknown) => {
+      if (entity === UserStory) return mockStoryRepo;
+      if (entity === VerificationStep) return mockStepRepo;
+      return {};
+    });
   });
 
   describe('create', () => {
-    it('should create a story with steps and return it', async () => {
+    it('should create a story with steps in a transaction and return it', async () => {
       const dto = {
         title: 'Login flow',
         description: 'Test login',
@@ -62,13 +86,14 @@ describe('UserStoriesService', () => {
       mockStepRepo.create.mockReturnValue(step);
       mockStepRepo.save.mockResolvedValue([step]);
 
-      // findOne called after creation
+      // findOne called after creation (outside transaction)
       const storyWithSteps = { ...savedStory, steps: [step] };
       mockStoryRepo.findOne.mockResolvedValue(storyWithSteps);
 
       const result = await service.create('proj-1', dto);
       expect(result.id).toBe('story-1');
       expect(result.steps).toHaveLength(1);
+      expect(mockDataSource.transaction).toHaveBeenCalled();
       expect(mockStoryRepo.save).toHaveBeenCalled();
       expect(mockStepRepo.save).toHaveBeenCalled();
     });
@@ -319,7 +344,7 @@ describe('UserStoriesService', () => {
   });
 
   describe('update', () => {
-    it('should update scalar fields', async () => {
+    it('should update scalar fields in a transaction', async () => {
       const story = {
         id: 'story-1',
         title: 'Old',
@@ -335,6 +360,7 @@ describe('UserStoriesService', () => {
 
       const result = await service.update('story-1', { title: 'New' });
       expect(result.title).toBe('New');
+      expect(mockDataSource.transaction).toHaveBeenCalled();
     });
 
     it('should update status', async () => {
@@ -387,6 +413,9 @@ describe('UserStoriesService', () => {
         .mockResolvedValueOnce(story) // initial find
         .mockResolvedValueOnce({ ...story, steps: [] }); // findOne after sync
 
+      mockStepRepo.create.mockImplementation((s: Record<string, unknown>) => s);
+      mockStepRepo.save.mockResolvedValue([]);
+
       await service.update('story-1', {
         steps: [
           { id: 'step-1', order: 1, instruction: 'Updated step 1' },
@@ -396,17 +425,16 @@ describe('UserStoriesService', () => {
 
       // step-2 should be deleted
       expect(mockStepRepo.delete).toHaveBeenCalled();
-      // step-1 should be updated
-      expect(mockStepRepo.update).toHaveBeenCalledWith('step-1', {
-        order: 1,
-        instruction: 'Updated step 1',
-      });
-      // new step should be created
-      expect(mockStepRepo.create).toHaveBeenCalledWith({
-        storyId: 'story-1',
-        order: 2,
-        instruction: 'Brand new step',
-      });
+      // step-1 should be saved (batched with other updates)
+      expect(mockStepRepo.save).toHaveBeenCalled();
+      // new step should be created via save
+      expect(mockStepRepo.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          storyId: 'story-1',
+          order: 2,
+          instruction: 'Brand new step',
+        }),
+      );
     });
 
     it('should throw BadRequestException for invalid step IDs', async () => {
@@ -439,19 +467,36 @@ describe('UserStoriesService', () => {
         .mockResolvedValueOnce(story)
         .mockResolvedValueOnce({ ...story, steps: [] });
 
-      mockStepRepo.create.mockReturnValue({});
-      mockStepRepo.save.mockResolvedValue({});
+      mockStepRepo.create.mockImplementation((s: Record<string, unknown>) => s);
+      mockStepRepo.save.mockResolvedValue([]);
 
       await service.update('story-1', {
         steps: [{ order: 1, instruction: 'New step' }],
       });
 
       expect(mockStepRepo.delete).toHaveBeenCalled();
-      expect(mockStepRepo.create).toHaveBeenCalledWith({
-        storyId: 'story-1',
-        order: 1,
-        instruction: 'New step',
-      });
+      expect(mockStepRepo.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          storyId: 'story-1',
+          order: 1,
+          instruction: 'New step',
+        }),
+      );
+    });
+
+    it('should throw BadRequestException when steps array is empty', async () => {
+      const story = {
+        id: 'story-1',
+        title: 'S1',
+        steps: [
+          { id: 'step-1', storyId: 'story-1', order: 1, instruction: 'S1' },
+        ],
+      };
+      mockStoryRepo.findOne.mockResolvedValueOnce(story);
+
+      await expect(service.update('story-1', { steps: [] })).rejects.toThrow(
+        BadRequestException,
+      );
     });
   });
 

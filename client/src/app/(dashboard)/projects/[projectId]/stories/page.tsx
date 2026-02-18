@@ -1,6 +1,6 @@
 'use client';
 
-import { use, useState } from 'react';
+import { use, useState, useEffect } from 'react';
 import Link from 'next/link';
 import { FileText, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -33,13 +33,22 @@ export default function StoriesPage({
   const [status, setStatus] = useState<string>('');
   const [priority, setPriority] = useState<string>('');
   const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+      setPage(1);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [search]);
 
   const { data, isLoading, isError, refetch } = useStories(projectId, {
     page,
     limit: PAGE_SIZE,
     status: status || undefined,
     priority: priority || undefined,
-    search: search || undefined,
+    search: debouncedSearch || undefined,
   });
 
   return (
@@ -66,10 +75,7 @@ export default function StoriesPage({
         <Input
           placeholder="Search stories..."
           value={search}
-          onChange={(e) => {
-            setSearch(e.target.value);
-            setPage(1);
-          }}
+          onChange={(e) => setSearch(e.target.value)}
           className="max-w-xs"
         />
         <Select

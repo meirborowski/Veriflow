@@ -56,6 +56,7 @@ export function StepBuilder({ steps, onChange }: StepBuilderProps) {
               onClick={() => removeStep(index)}
               disabled={steps.length <= 1}
               aria-label={`Remove step ${index + 1}`}
+              title={steps.length <= 1 ? 'At least one step is required' : `Remove step ${index + 1}`}
               className="shrink-0"
             >
               <Trash2 className="h-4 w-4" />
