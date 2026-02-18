@@ -4,7 +4,6 @@ import {
   ExecutionContext,
   ForbiddenException,
   NotFoundException,
-  Optional,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -23,9 +22,8 @@ export class RolesGuard implements CanActivate {
     private readonly reflector: Reflector,
     @InjectRepository(ProjectMember)
     private readonly memberRepository: Repository<ProjectMember>,
-    @Optional()
     @InjectRepository(UserStory)
-    private readonly storyRepository?: Repository<UserStory>,
+    private readonly storyRepository: Repository<UserStory>,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -56,10 +54,6 @@ export class RolesGuard implements CanActivate {
       const storyId = request.params.id as string | undefined;
       if (!storyId) {
         throw new ForbiddenException('Story ID is required');
-      }
-
-      if (!this.storyRepository) {
-        throw new ForbiddenException('Story resolution not available');
       }
 
       const story = await this.storyRepository.findOne({

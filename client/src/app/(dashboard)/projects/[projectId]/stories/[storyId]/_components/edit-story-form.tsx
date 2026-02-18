@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, type FormEvent } from 'react';
+import { useState, useRef, type FormEvent } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -33,15 +33,22 @@ export function EditStoryForm({ story, onCancel }: EditStoryFormProps) {
   const [steps, setSteps] = useState<StepInput[]>(
     story.steps.map((s) => ({ id: s.id, instruction: s.instruction })),
   );
+  const [stepError, setStepError] = useState('');
+  const stepBuilderRef = useRef<HTMLDivElement>(null);
 
   function handleSubmit(e: FormEvent) {
     e.preventDefault();
+    setStepError('');
     const trimmedTitle = title.trim();
     const trimmedDescription = description.trim();
     if (!trimmedTitle || !trimmedDescription) return;
 
     const validSteps = steps.filter((s) => s.instruction.trim());
-    if (validSteps.length === 0) return;
+    if (validSteps.length === 0) {
+      setStepError('At least one verification step is required.');
+      stepBuilderRef.current?.scrollIntoView({ behavior: 'smooth' });
+      return;
+    }
 
     updateStory.mutate(
       {
@@ -128,7 +135,12 @@ export function EditStoryForm({ story, onCancel }: EditStoryFormProps) {
         </div>
       </div>
 
-      <StepBuilder steps={steps} onChange={setSteps} />
+      <div ref={stepBuilderRef}>
+        <StepBuilder steps={steps} onChange={(s) => { setSteps(s); setStepError(''); }} />
+        {stepError && (
+          <p className="mt-1 text-sm text-destructive">{stepError}</p>
+        )}
+      </div>
 
       <div className="flex justify-end gap-3">
         <Button type="button" variant="outline" onClick={onCancel}>
