@@ -168,40 +168,44 @@ Auth (JWT), Project CRUD, User Story CRUD, Role-based access control — built e
 ### 4.1 User Story CRUD + verification steps
 | # | Task | Status |
 |---|---|---|
-| 1 | Create `user-story.entity.ts` — UUID PK, `projectId` (FK), `title`, `description`, `priority` (enum), `status` (StoryStatus enum), `createdAt`, `updatedAt` | Not Started |
-| 2 | Create `verification-step.entity.ts` — UUID PK, `storyId` (FK), `order` (int), `instruction` (text) | Not Started |
-| 3 | Create `user-stories.module.ts`, `user-stories.controller.ts`, `user-stories.service.ts` | Not Started |
-| 4 | **Create** — `POST /api/v1/projects/:projectId/stories` | Not Started |
+| 1 | Create `user-story.entity.ts` — UUID PK, `projectId` (FK), `title`, `description`, `priority` (enum), `status` (StoryStatus enum), `createdAt`, `updatedAt` | Done |
+| 2 | Create `verification-step.entity.ts` — UUID PK, `storyId` (FK), `order` (int), `instruction` (text) | Done |
+| 3 | Create `user-stories.module.ts`, `user-stories.controller.ts`, `user-stories.service.ts` | Done |
+| 4 | **Create** — `POST /api/v1/projects/:projectId/stories` | Done |
 |   | Roles: Admin, PM, Developer | |
 |   | DTO: `title`, `description`, `priority`, `steps[]` (each: `order`, `instruction`) | |
 |   | Save story + steps in single transaction | |
-| 5 | **List** — `GET /api/v1/projects/:projectId/stories` | Not Started |
+| 5 | **List** — `GET /api/v1/projects/:projectId/stories` | Done |
 |   | Query: `?status=ACTIVE&priority=HIGH&search=...&page=1&limit=20` | |
 |   | Return `{ data: [...], meta }` with step count per story | |
-| 6 | **Detail** — `GET /api/v1/stories/:id` | Not Started |
+| 6 | **Detail** — `GET /api/v1/stories/:id` | Done |
 |   | Include full steps array ordered by `order` | |
-| 7 | **Update** — `PATCH /api/v1/stories/:id` | Not Started |
+| 7 | **Update** — `PATCH /api/v1/stories/:id` | Done |
 |   | Roles: Admin, PM, Developer | |
 |   | Partial update — all fields optional | |
 |   | Steps: with `id` → update, without `id` → create, missing from array → delete | |
-| 8 | **Delete** — `DELETE /api/v1/stories/:id` | Not Started |
+| 8 | **Delete** — `DELETE /api/v1/stories/:id` | Done |
 |   | Roles: Admin, PM | |
 |   | Hard delete (cascade steps) | |
-| 9 | Unit tests: CRUD, step sync logic (create/update/delete), role enforcement, pagination | Not Started |
+| 9 | Adapt RolesGuard: `@ResolveProjectFrom('story')` + `params.projectId` fallback | Done |
+| 10 | Unit tests: CRUD, step sync logic (create/update/delete), role enforcement, pagination | Done |
 
 ### 4.2 Client: story list + create/edit pages
 | # | Task | Status |
 |---|---|---|
-| 1 | Create `stories/page.tsx` — table (title, priority badge, status badge, step count, actions) | Not Started |
-| 2 | Sortable columns, row action dropdown (edit, delete) | Not Started |
-| 3 | Empty state: "No stories yet. Create one." + button | Not Started |
-| 4 | Create `stories/new/page.tsx` — form: title, description, priority selector | Not Started |
-| 5 | Dynamic step list: add/remove/reorder verification steps | Not Started |
-| 6 | Create `stories/[storyId]/page.tsx` — detail/edit view with steps | Not Started |
-| 7 | Inline validation, submit button bottom-right | Not Started |
-| 8 | Delete confirmation dialog | Not Started |
-| 9 | Toast notifications: success/error on create/update/delete | Not Started |
-| 10 | Skeleton loading states | Not Started |
+| 1 | Create `stories/page.tsx` — table (title, priority badge, status badge, step count, actions) | Done |
+| 2 | Row action dropdown (view, edit, delete) | Done |
+| 3 | Empty state: "No stories yet. Create one." + button | Done |
+| 4 | Create `stories/new/page.tsx` — form: title, description, priority selector | Done |
+| 5 | Dynamic step list: add/remove verification steps (StepBuilder component) | Done |
+| 6 | Create `stories/[storyId]/page.tsx` — detail/edit view with steps | Done |
+| 7 | Inline validation, submit button bottom-right | Done |
+| 8 | Delete confirmation dialog | Done |
+| 9 | Toast notifications: success/error on create/update/delete | Done |
+| 10 | Skeleton loading states | Done |
+| 11 | Status/priority filter bar + search input | Done |
+| 12 | PriorityBadge + StatusBadge shared components | Done |
+| 13 | Navigation link on project detail page | Done |
 
 ---
 

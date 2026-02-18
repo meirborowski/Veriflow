@@ -2,7 +2,7 @@
 
 import { use } from 'react';
 import Link from 'next/link';
-import { Settings } from 'lucide-react';
+import { FileText, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Table,
@@ -71,6 +71,23 @@ export default function ProjectDetailPage({
       {project.description && (
         <p className="mt-2 text-sm text-muted-foreground">{project.description}</p>
       )}
+
+      <div className="mt-8">
+        <Link
+          href={`/projects/${projectId}/stories`}
+          className="inline-flex items-center gap-3 rounded-lg border p-4 transition-colors hover:bg-muted/50"
+        >
+          <div className="rounded-md bg-muted p-2">
+            <FileText className="h-5 w-5 text-muted-foreground" />
+          </div>
+          <div>
+            <p className="font-medium">User Stories</p>
+            <p className="text-sm text-muted-foreground">
+              Manage stories and verification steps
+            </p>
+          </div>
+        </Link>
+      </div>
 
       <div className="mt-8">
         <h2 className="text-lg font-medium">Members</h2>

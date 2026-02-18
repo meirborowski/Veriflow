@@ -3,14 +3,18 @@ import {
   CanActivate,
   ExecutionContext,
   ForbiddenException,
+  NotFoundException,
+  Optional,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Request } from 'express';
 import { ROLES_KEY } from '../decorators/roles.decorator';
+import { RESOLVE_PROJECT_KEY } from '../decorators/resolve-project.decorator';
 import { UserRole } from '../types/enums';
 import { ProjectMember } from '../../projects/entities/project-member.entity';
+import { UserStory } from '../../user-stories/entities/user-story.entity';
 import type { JwtPayload } from '../decorators/current-user.decorator';
 
 @Injectable()
@@ -19,6 +23,9 @@ export class RolesGuard implements CanActivate {
     private readonly reflector: Reflector,
     @InjectRepository(ProjectMember)
     private readonly memberRepository: Repository<ProjectMember>,
+    @Optional()
+    @InjectRepository(UserStory)
+    private readonly storyRepository?: Repository<UserStory>,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -38,7 +45,39 @@ export class RolesGuard implements CanActivate {
       throw new ForbiddenException('Authentication required');
     }
 
-    const projectId = request.params.id as string | undefined;
+    let projectId: string | undefined;
+
+    const resolveFrom = this.reflector.getAllAndOverride<string>(
+      RESOLVE_PROJECT_KEY,
+      [context.getHandler(), context.getClass()],
+    );
+
+    if (resolveFrom === 'story') {
+      const storyId = request.params.id as string | undefined;
+      if (!storyId) {
+        throw new ForbiddenException('Story ID is required');
+      }
+
+      if (!this.storyRepository) {
+        throw new ForbiddenException('Story resolution not available');
+      }
+
+      const story = await this.storyRepository.findOne({
+        where: { id: storyId },
+        select: ['id', 'projectId'],
+      });
+
+      if (!story) {
+        throw new NotFoundException('Story not found');
+      }
+
+      projectId = story.projectId;
+    } else {
+      projectId = (request.params.projectId ?? request.params.id) as
+        | string
+        | undefined;
+    }
+
     if (!projectId) {
       throw new ForbiddenException('Project ID is required');
     }
