@@ -59,6 +59,7 @@ export function DeleteProjectSection({ projectId, projectName }: DeleteProjectSe
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDelete}
+              disabled={deleteProject.isPending}
               className="bg-destructive text-white hover:bg-destructive/90"
             >
               {deleteProject.isPending ? 'Deleting...' : 'Delete'}

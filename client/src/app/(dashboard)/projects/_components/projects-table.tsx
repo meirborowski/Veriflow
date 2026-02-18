@@ -85,7 +85,7 @@ export function ProjectsTable({ projects }: { projects: ProjectWithRole[] }) {
               <TableCell>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon-sm">
+                    <Button variant="ghost" size="icon-sm" aria-label="Open project actions menu">
                       <MoreHorizontal className="h-4 w-4" />
                     </Button>
                   </DropdownMenuTrigger>
@@ -133,6 +133,7 @@ export function ProjectsTable({ projects }: { projects: ProjectWithRole[] }) {
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDelete}
+              disabled={deleteProject.isPending}
               className="bg-destructive text-white hover:bg-destructive/90"
             >
               {deleteProject.isPending ? 'Deleting...' : 'Delete'}

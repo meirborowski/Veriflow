@@ -51,9 +51,9 @@ export function InviteMemberForm({ projectId }: { projectId: string }) {
           />
         </div>
         <div className="w-36 space-y-2">
-          <Label>Role</Label>
+          <Label htmlFor="invite-role">Role</Label>
           <Select value={role} onValueChange={(v) => setRole(v as UserRole)}>
-            <SelectTrigger>
+            <SelectTrigger id="invite-role">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
