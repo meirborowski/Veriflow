@@ -1,5 +1,5 @@
 import { SetMetadata } from '@nestjs/common';
 
 export const RESOLVE_PROJECT_KEY = 'resolveProjectFrom';
-export const ResolveProjectFrom = (source: 'story') =>
+export const ResolveProjectFrom = (source: 'story' | 'release') =>
   SetMetadata(RESOLVE_PROJECT_KEY, source);

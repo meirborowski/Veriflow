@@ -9,6 +9,7 @@ import { UserRole } from '../types/enums';
 import { Repository } from 'typeorm';
 import { ProjectMember } from '../../projects/entities/project-member.entity';
 import { UserStory } from '../../user-stories/entities/user-story.entity';
+import { Release } from '../../releases/entities/release.entity';
 import { ROLES_KEY } from '../decorators/roles.decorator';
 import { RESOLVE_PROJECT_KEY } from '../decorators/resolve-project.decorator';
 
@@ -17,6 +18,7 @@ describe('RolesGuard', () => {
   let reflector: Reflector;
   let memberRepository: jest.Mocked<Repository<ProjectMember>>;
   let storyRepository: jest.Mocked<Repository<UserStory>>;
+  let releaseRepository: jest.Mocked<Repository<Release>>;
 
   beforeEach(() => {
     reflector = new Reflector();
@@ -26,8 +28,16 @@ describe('RolesGuard', () => {
     storyRepository = {
       findOne: jest.fn(),
     } as unknown as jest.Mocked<Repository<UserStory>>;
+    releaseRepository = {
+      findOne: jest.fn(),
+    } as unknown as jest.Mocked<Repository<Release>>;
 
-    guard = new RolesGuard(reflector, memberRepository, storyRepository);
+    guard = new RolesGuard(
+      reflector,
+      memberRepository,
+      storyRepository,
+      releaseRepository,
+    );
   });
 
   function createMockContext(
@@ -247,6 +257,83 @@ describe('RolesGuard', () => {
       .mockImplementation((key: string) => {
         if (key === ROLES_KEY) return [UserRole.ADMIN];
         if (key === RESOLVE_PROJECT_KEY) return 'story';
+        return undefined;
+      });
+
+    const context = createMockContext(
+      { userId: 'user-1', email: 'test@test.com' },
+      {},
+    );
+
+    await expect(guard.canActivate(context)).rejects.toThrow(
+      ForbiddenException,
+    );
+  });
+
+  // Release resolution tests
+
+  it('should resolve projectId from release when @ResolveProjectFrom("release") is set', async () => {
+    jest
+      .spyOn(reflector, 'getAllAndOverride')
+      .mockImplementation((key: string) => {
+        if (key === ROLES_KEY) return [UserRole.ADMIN];
+        if (key === RESOLVE_PROJECT_KEY) return 'release';
+        return undefined;
+      });
+
+    releaseRepository.findOne.mockResolvedValue({
+      id: 'release-1',
+      projectId: 'project-1',
+    } as Release);
+
+    memberRepository.findOne.mockResolvedValue({
+      userId: 'user-1',
+      projectId: 'project-1',
+      role: UserRole.ADMIN,
+    } as ProjectMember);
+
+    const context = createMockContext(
+      { userId: 'user-1', email: 'test@test.com' },
+      { id: 'release-1' },
+    );
+
+    expect(await guard.canActivate(context)).toBe(true);
+    // eslint-disable-next-line @typescript-eslint/unbound-method
+    expect(releaseRepository.findOne).toHaveBeenCalledWith({
+      where: { id: 'release-1' },
+      select: ['id', 'projectId'],
+    });
+    // eslint-disable-next-line @typescript-eslint/unbound-method
+    expect(memberRepository.findOne).toHaveBeenCalledWith({
+      where: { userId: 'user-1', projectId: 'project-1' },
+    });
+  });
+
+  it('should throw NotFoundException when release is not found during resolution', async () => {
+    jest
+      .spyOn(reflector, 'getAllAndOverride')
+      .mockImplementation((key: string) => {
+        if (key === ROLES_KEY) return [UserRole.ADMIN];
+        if (key === RESOLVE_PROJECT_KEY) return 'release';
+        return undefined;
+      });
+
+    releaseRepository.findOne.mockResolvedValue(null);
+
+    const context = createMockContext(
+      { userId: 'user-1', email: 'test@test.com' },
+      { id: 'nonexistent-release' },
+    );
+
+    await expect(guard.canActivate(context)).rejects.toThrow(NotFoundException);
+  });
+
+  it('should throw ForbiddenException when release ID param is missing for release resolution', async () => {
+    jest
+      .spyOn(reflector, 'getAllAndOverride')
+      .mockImplementation((key: string) => {
+        if (key === ROLES_KEY) return [UserRole.ADMIN];
+        if (key === RESOLVE_PROJECT_KEY) return 'release';
         return undefined;
       });
 
