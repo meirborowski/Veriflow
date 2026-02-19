@@ -1,5 +1,30 @@
 # Changelog
 
+## 2026-02-19
+- feat: add release types and TanStack Query hooks (list, detail, create, update, delete, close, add/remove stories)
+- feat: add release list page with status filter, pagination, empty state, and skeleton loading
+- feat: add create release dialog with redirect to detail page on success
+- feat: add release detail page with draft/closed state views
+- feat: add scoping UI: add stories dialog with multi-select search, remove story with confirmation
+- feat: add close release confirmation dialog (disabled when 0 stories)
+- feat: add closed release dashboard with summary card (total stories, total steps, priority breakdown)
+- feat: add snapshot stories table with expandable verification steps
+- feat: add ReleaseStatusBadge shared component (Draft = blue, Closed = green)
+- feat: add "Releases" navigation link on project detail page
+- chore: install shadcn checkbox component
+- feat: add Release, ReleaseStory, ReleaseStoryStep entities with TypeORM relations
+- feat: add release_scoped_stories many-to-many join table for draft scope tracking
+- feat: extend RolesGuard with @ResolveProjectFrom('release') for release-scoped routes
+- feat: add releases service with CRUD, pagination, storyCount CASE subquery
+- feat: add story-to-release scoping (addStories, removeStory) with validation
+- feat: add release close with transactional snapshot freeze (copies stories + steps)
+- feat: add releases controller with 8 endpoints (create, list, get, update, delete, close, add stories, remove story)
+- feat: add DTOs for release create/update, query, and add-stories
+- feat: add releases module registered in AppModule
+- test: add 27 unit tests for ReleasesService (CRUD, scoping, close/snapshot)
+- test: add 8 unit tests for ReleasesController
+- test: add 3 unit tests for RolesGuard release resolution
+
 ## 2026-02-18
 - feat: add User Story and VerificationStep entities with TypeORM relations
 - feat: add user stories service with CRUD, step sync algorithm, pagination, and filtering

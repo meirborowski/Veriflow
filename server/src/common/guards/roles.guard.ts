@@ -14,6 +14,7 @@ import { RESOLVE_PROJECT_KEY } from '../decorators/resolve-project.decorator';
 import { UserRole } from '../types/enums';
 import { ProjectMember } from '../../projects/entities/project-member.entity';
 import { UserStory } from '../../user-stories/entities/user-story.entity';
+import { Release } from '../../releases/entities/release.entity';
 import type { JwtPayload } from '../decorators/current-user.decorator';
 
 @Injectable()
@@ -24,6 +25,8 @@ export class RolesGuard implements CanActivate {
     private readonly memberRepository: Repository<ProjectMember>,
     @InjectRepository(UserStory)
     private readonly storyRepository: Repository<UserStory>,
+    @InjectRepository(Release)
+    private readonly releaseRepository: Repository<Release>,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -66,6 +69,22 @@ export class RolesGuard implements CanActivate {
       }
 
       projectId = story.projectId;
+    } else if (resolveFrom === 'release') {
+      const releaseId = request.params.id as string | undefined;
+      if (!releaseId) {
+        throw new ForbiddenException('Release ID is required');
+      }
+
+      const release = await this.releaseRepository.findOne({
+        where: { id: releaseId },
+        select: ['id', 'projectId'],
+      });
+
+      if (!release) {
+        throw new NotFoundException('Release not found');
+      }
+
+      projectId = release.projectId;
     } else {
       projectId = (request.params.projectId ?? request.params.id) as
         | string

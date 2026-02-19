@@ -7,10 +7,17 @@ import { Project } from './entities/project.entity';
 import { ProjectMember } from './entities/project-member.entity';
 import { User } from '../auth/entities/user.entity';
 import { UserStory } from '../user-stories/entities/user-story.entity';
+import { Release } from '../releases/entities/release.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Project, ProjectMember, User, UserStory]),
+    TypeOrmModule.forFeature([
+      Project,
+      ProjectMember,
+      User,
+      UserStory,
+      Release,
+    ]),
   ],
   controllers: [ProjectsController],
   providers: [ProjectsService, RolesGuard],

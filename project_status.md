@@ -1,7 +1,7 @@
 # Veriflow — Project Status
 
 ## Current Phase
-**Phase 1 — Foundation**
+**Phase 2 — Release Engine**
 
 ## Phase Progress
 
@@ -44,20 +44,27 @@
 
 ### Phase 2 — Release Engine
 
-#### Releases (end-to-end)
+#### Releases — Server (end-to-end)
 | Task | Status | Notes |
 |---|---|---|
-| Release CRUD (draft state) | Not Started | |
-| Story-to-release scoping (add/remove) | Not Started | |
-| Release close → snapshot creation | Not Started | Transaction: copy stories + steps |
-| Client: release list + detail pages | Not Started | |
-| Client: release scoping UI | Not Started | |
+| Release + snapshot entities | Done | Release, ReleaseStory, ReleaseStoryStep, scoping join table |
+| RolesGuard extension for release routes | Done | @ResolveProjectFrom('release') |
+| Release CRUD (draft state) | Done | Create, list (paginated), get, update, delete |
+| Story-to-release scoping (add/remove) | Done | Bulk add by storyIds, remove individual, draft-only |
+| Release close → snapshot creation | Done | Transaction: copy stories + steps, set CLOSED |
+| Unit tests (service, controller, guard) | Done | 35 tests (service + controller + guard) |
 
-#### Release Dashboard (end-to-end)
+#### Releases — Client (end-to-end)
 | Task | Status | Notes |
 |---|---|---|
-| Release dashboard (read-only frozen scope) | Not Started | |
-| Client: release dashboard | Not Started | |
+| Release types + hooks | Done | TanStack Query, query key factory, 9 hooks |
+| Client: release list page | Done | Table, filters, empty state, skeleton |
+| Client: create release | Done | Dialog with redirect to detail |
+| Client: release detail page | Done | Overview, story list, status badge, skeleton |
+| Client: release scoping UI (draft) | Done | Add stories dialog with search, remove with confirm |
+| Client: close release action | Done | Confirmation dialog, query invalidation |
+| Client: release dashboard (closed) | Done | Summary card, expandable snapshot stories |
+| Navigation integration | Done | Project detail link, ReleaseStatusBadge |
 
 ### Phase 3 — Test Runner
 
@@ -107,3 +114,4 @@ None currently.
 | 2026-02-15 | Full execution history (append-only) | Every test attempt is its own row for audit trail |
 | 2026-02-15 | Bug entity created on Fail | Separate lifecycle, linked to story + execution |
 | 2026-02-15 | Docker Compose for dev | All services (db, server, client) run via `docker compose up` with hot-reload |
+| 2026-02-19 | Separate scoping join table for draft releases | Many-to-many `release_scoped_stories` tracks draft scope; ReleaseStory snapshots created only on close |
