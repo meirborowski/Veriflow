@@ -43,6 +43,7 @@ describe('ReleasesService', () => {
   };
 
   const mockReleaseRepoTx = {
+    findOne: jest.fn(),
     update: jest.fn(),
   };
 
@@ -400,7 +401,7 @@ describe('ReleasesService', () => {
         ],
       };
 
-      mockReleaseRepo.findOne.mockResolvedValue(release);
+      mockReleaseRepoTx.findOne.mockResolvedValue(release);
 
       const savedSnapshot1 = { id: 'rs-1', releaseId: 'release-1' };
       const savedSnapshot2 = { id: 'rs-2', releaseId: 'release-1' };
@@ -472,7 +473,7 @@ describe('ReleasesService', () => {
         scopedStories: [],
       };
 
-      mockReleaseRepo.findOne.mockResolvedValue(release);
+      mockReleaseRepoTx.findOne.mockResolvedValue(release);
 
       await expect(service.close('release-1')).rejects.toThrow(
         BadRequestException,
@@ -486,7 +487,7 @@ describe('ReleasesService', () => {
         scopedStories: [{ id: 'story-1' }],
       };
 
-      mockReleaseRepo.findOne.mockResolvedValue(release);
+      mockReleaseRepoTx.findOne.mockResolvedValue(release);
 
       await expect(service.close('release-1')).rejects.toThrow(
         ConflictException,
@@ -494,7 +495,7 @@ describe('ReleasesService', () => {
     });
 
     it('should throw NotFoundException when release does not exist', async () => {
-      mockReleaseRepo.findOne.mockResolvedValue(null);
+      mockReleaseRepoTx.findOne.mockResolvedValue(null);
 
       await expect(service.close('bad-id')).rejects.toThrow(NotFoundException);
     });

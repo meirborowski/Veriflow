@@ -19,8 +19,8 @@ export class ReleaseStory {
   @Column('uuid')
   releaseId: string;
 
-  @Column('uuid')
-  sourceStoryId: string;
+  @Column({ type: 'uuid', nullable: true })
+  sourceStoryId: string | null;
 
   @Column()
   title: string;
