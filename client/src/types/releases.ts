@@ -1,4 +1,4 @@
-import type { Priority } from './user-stories';
+import type { Priority, StoryStatus } from './user-stories';
 
 export enum ReleaseStatus {
   DRAFT = 'DRAFT',
@@ -25,7 +25,7 @@ export interface ReleaseDetailDraftStory {
   id: string;
   title: string;
   priority: Priority;
-  status: string;
+  status: StoryStatus;
   stepCount: number;
 }
 
@@ -46,6 +46,15 @@ export interface ReleaseDetail {
   createdAt: string;
   closedAt: string | null;
   stories: ReleaseDetailDraftStory[] | ReleaseDetailSnapshotStory[];
+}
+
+export interface Release {
+  id: string;
+  projectId: string;
+  name: string;
+  status: ReleaseStatus;
+  createdAt: string;
+  closedAt: string | null;
 }
 
 export interface CloseReleaseResponse {
