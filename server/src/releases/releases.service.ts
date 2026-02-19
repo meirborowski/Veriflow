@@ -205,29 +205,31 @@ export class ReleasesService {
     closedAt: Date;
     storyCount: number;
   }> {
-    const release = await this.releaseRepository.findOne({
-      where: { id: releaseId },
-      relations: ['scopedStories', 'scopedStories.steps'],
-    });
-
-    if (!release) {
-      throw new NotFoundException('Release not found');
-    }
-
-    if (release.status !== ReleaseStatus.DRAFT) {
-      throw new ConflictException('Release is already closed');
-    }
-
-    if (release.scopedStories.length === 0) {
-      throw new BadRequestException('Cannot close release with no stories');
-    }
-
     const closedAt = new Date();
 
-    await this.dataSource.transaction(async (manager) => {
+    const result = await this.dataSource.transaction(async (manager) => {
+      const releaseRepo = manager.getRepository(Release);
       const releaseStoryRepo = manager.getRepository(ReleaseStory);
       const releaseStepRepo = manager.getRepository(ReleaseStoryStep);
-      const releaseRepo = manager.getRepository(Release);
+
+      // Lock the release row to prevent concurrent close attempts
+      const release = await releaseRepo.findOne({
+        where: { id: releaseId },
+        relations: ['scopedStories', 'scopedStories.steps'],
+        lock: { mode: 'pessimistic_write' },
+      });
+
+      if (!release) {
+        throw new NotFoundException('Release not found');
+      }
+
+      if (release.status !== ReleaseStatus.DRAFT) {
+        throw new ConflictException('Release is already closed');
+      }
+
+      if (release.scopedStories.length === 0) {
+        throw new BadRequestException('Cannot close release with no stories');
+      }
 
       for (const story of release.scopedStories) {
         const snapshot = releaseStoryRepo.create({
@@ -257,18 +259,25 @@ export class ReleasesService {
         status: ReleaseStatus.CLOSED,
         closedAt,
       });
+
+      return {
+        id: release.id,
+        name: release.name,
+        projectId: release.projectId,
+        storyCount: release.scopedStories.length,
+      };
     });
 
     this.logger.log(
-      `Release closed: id=${releaseId}, project=${release.projectId}, stories=${release.scopedStories.length}`,
+      `Release closed: id=${releaseId}, project=${result.projectId}, stories=${result.storyCount}`,
     );
 
     return {
-      id: release.id,
-      name: release.name,
+      id: result.id,
+      name: result.name,
       status: ReleaseStatus.CLOSED,
       closedAt,
-      storyCount: release.scopedStories.length,
+      storyCount: result.storyCount,
     };
   }
 
@@ -289,15 +298,18 @@ export class ReleasesService {
       throw new ConflictException('Release is already closed');
     }
 
+    // Dedupe storyIds to prevent false "not found" on duplicates
+    const uniqueStoryIds = [...new Set(dto.storyIds)];
+
     // Validate all stories exist and belong to the same project
     const stories = await this.storyRepository.find({
-      where: { id: In(dto.storyIds) },
+      where: { id: In(uniqueStoryIds) },
       select: ['id', 'projectId'],
     });
 
-    if (stories.length !== dto.storyIds.length) {
+    if (stories.length !== uniqueStoryIds.length) {
       const foundIds = stories.map((s) => s.id);
-      const missing = dto.storyIds.filter((id) => !foundIds.includes(id));
+      const missing = uniqueStoryIds.filter((id) => !foundIds.includes(id));
       throw new BadRequestException(`Stories not found: ${missing.join(', ')}`);
     }
 

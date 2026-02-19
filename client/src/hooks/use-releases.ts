@@ -3,6 +3,7 @@ import { toast } from 'sonner';
 import { api, ApiError } from '@/lib/api';
 import type { PaginatedResponse } from '@/types/projects';
 import type {
+  Release,
   ReleaseListItem,
   ReleaseDetail,
   CloseReleaseResponse,
@@ -54,7 +55,7 @@ export function useCreateRelease(projectId: string) {
 
   return useMutation({
     mutationFn: (data: CreateReleasePayload) =>
-      api.post<ReleaseDetail>(`/projects/${projectId}/releases`, data),
+      api.post<Release>(`/projects/${projectId}/releases`, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: releaseKeys.lists() });
       toast.success('Release created');
@@ -72,7 +73,7 @@ export function useUpdateRelease(releaseId: string) {
 
   return useMutation({
     mutationFn: (data: UpdateReleasePayload) =>
-      api.patch<ReleaseDetail>(`/releases/${releaseId}`, data),
+      api.patch<Release>(`/releases/${releaseId}`, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: releaseKeys.detail(releaseId) });
       queryClient.invalidateQueries({ queryKey: releaseKeys.lists() });
