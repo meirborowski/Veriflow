@@ -45,6 +45,7 @@ export function SnapshotStoriesTable({ stories }: SnapshotStoriesTableProps) {
       <TableBody>
         {stories.map((story) => {
           const isExpanded = expanded.has(story.id);
+          const stepsId = `steps-${story.id}`;
           return (
             <TableRow
               key={story.id}
@@ -52,17 +53,35 @@ export function SnapshotStoriesTable({ stories }: SnapshotStoriesTableProps) {
               onClick={() => toggleExpand(story.id)}
             >
               <TableCell className="pr-0">
-                {isExpanded ? (
-                  <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                ) : (
-                  <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                )}
+                <button
+                  type="button"
+                  aria-expanded={isExpanded}
+                  aria-controls={stepsId}
+                  aria-label={`${isExpanded ? 'Collapse' : 'Expand'} ${story.title}`}
+                  className="flex items-center justify-center"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    toggleExpand(story.id);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      toggleExpand(story.id);
+                    }
+                  }}
+                >
+                  {isExpanded ? (
+                    <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                  ) : (
+                    <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                  )}
+                </button>
               </TableCell>
               <TableCell>
                 <div>
                   <span className="font-medium">{story.title}</span>
                   {isExpanded && story.steps.length > 0 && (
-                    <ol className="mt-3 space-y-2">
+                    <ol id={stepsId} className="mt-3 space-y-2">
                       {story.steps.map((step) => (
                         <li
                           key={step.id}
