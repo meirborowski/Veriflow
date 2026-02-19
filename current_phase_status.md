@@ -1,228 +1,292 @@
-# Phase 1 — Foundation (Detailed Plan)
+# Phase 2 — Release Engine (Detailed Plan)
 
 ## Overview
-Auth (JWT), Project CRUD, User Story CRUD, Role-based access control — built end-to-end (server + client per feature).
+Release CRUD, story-to-release scoping, release close with snapshot freeze, release dashboard — built end-to-end (server + client per feature).
+
+**Key concept**: A Release groups User Stories into a testable scope. In `DRAFT` state, stories can be added/removed. On close, the scope is frozen — immutable snapshots (`ReleaseStory` / `ReleaseStoryStep`) are created so edits to master stories never affect in-progress testing.
+
+**Scoping mechanism**: A lightweight join table (`release_scoped_stories`) tracks which master stories are in a draft release's scope. On close, the system reads the scoping table, copies each story + its steps into snapshot entities, and sets the release status to `CLOSED`.
 
 ---
 
-## 1. Infrastructure
+## 1. Release Entities + Guard Extension
 
-### 1.1 PostgreSQL + TypeORM setup
+### 1.1 Release entity
 | # | Task | Status |
 |---|---|---|
-| 1 | Install TypeORM, `@nestjs/typeorm`, `@nestjs/config`, `pg` driver | Done |
-| 2 | Configure `TypeOrmModule.forRootAsync()` + `ConfigModule` in `AppModule` | Done |
-| 3 | Define shared enums (`UserRole`, `Priority`, `StoryStatus`, etc.) in `common/types/enums.ts` | Done |
-| 4 | Define pagination types in `common/types/pagination.ts` | Done |
+| 1 | Create `releases/entities/release.entity.ts` — UUID PK, `projectId` (FK → Project), `name`, `status` (ReleaseStatus enum, default DRAFT), `createdAt`, `closedAt` (nullable timestamptz) | Done |
+| 2 | Relations: `@ManyToOne(() => Project)`, `@OneToMany(() => ReleaseStory)` | Done |
 
-### 1.2 Global validation pipe
+### 1.2 Snapshot entities
 | # | Task | Status |
 |---|---|---|
-| 1 | Install `class-validator` and `class-transformer` | Done |
-| 2 | Create `ValidationPipe` in `common/pipes/validation.pipe.ts` | Done |
-| 3 | Register as global pipe in `main.ts` (`app.useGlobalPipes(...)`) | Done |
-| 4 | Unit tests (6 tests): valid DTO, invalid DTO, field errors, non-whitelisted rejection, primitives, no metatype | Done |
+| 1 | Create `releases/entities/release-story.entity.ts` — UUID PK, `releaseId` (FK → Release), `sourceStoryId` (FK → UserStory), `title`, `description`, `priority` (Priority enum) | Done |
+|   | These fields are copied from the master story at close time — immutable after creation | |
+| 2 | Create `releases/entities/release-story-step.entity.ts` — UUID PK, `releaseStoryId` (FK → ReleaseStory), `order` (int), `instruction` (text) | Done |
+|   | Copied from VerificationStep at close time — immutable after creation | |
+| 3 | Relations: ReleaseStory `@OneToMany(() => ReleaseStoryStep)`, cascade delete | Done |
 
-### 1.3 Global exception filter
+### 1.3 Scoping join table
 | # | Task | Status |
 |---|---|---|
-| 1 | Create `HttpExceptionFilter` in `common/filters/http-exception.filter.ts` | Done |
-| 2 | Standardize error shape: `{ statusCode, message, error }` | Done |
-| 3 | Handle validation errors: `{ statusCode: 400, message, errors: [{ field, message }] }` | Done |
-| 4 | Catch unknown errors → log stack, return 500 generic message | Done |
-| 5 | Register as global filter in `main.ts` | Done |
-| 6 | Unit tests (5 tests): object response, string response, 404, unknown Error, non-Error | Done |
+| 1 | Create many-to-many relation on Release entity: `@ManyToMany(() => UserStory)` with `@JoinTable({ name: 'release_scoped_stories' })` | Done |
+|   | Join table columns: `releaseId`, `storyId` — tracks draft scope | |
+|   | On close, this table is read to build snapshots; rows remain for traceability | |
+
+### 1.4 Extend @ResolveProjectFrom for release routes
+| # | Task | Status |
+|---|---|---|
+| 1 | Update `resolve-project.decorator.ts` — add `'release'` to the source union type | Done |
+| 2 | Update `roles.guard.ts` — add `'release'` branch: look up `Release` by `request.params.id`, extract `projectId` | Done |
+| 3 | Unit tests: resolve project from release ID, reject non-existent release | Done |
 
 ---
 
-## 2. Auth (end-to-end)
+## 2. Release CRUD
 
-### 2.1 User entity
+### 2.1 Module + Service + Controller
 | # | Task | Status |
 |---|---|---|
-| 1 | Create `auth/entities/user.entity.ts` — UUID PK, `email` (unique), `name`, `password` (hashed), `createdAt` | Done |
-| 2 | Install `bcrypt` + `@types/bcrypt` | Done |
-| 3 | Add `@BeforeInsert` hook to hash password | Done |
-| 4 | Register entity in `AuthModule` / `TypeOrmModule.forFeature([User])` | Done |
+| 1 | Create `releases/releases.module.ts` — register entities (Release, ReleaseStory, ReleaseStoryStep, ProjectMember, UserStory, VerificationStep) in `TypeOrmModule.forFeature` | Done |
+| 2 | Create `releases/releases.service.ts` with `Logger` | Done |
+| 3 | Create `releases/releases.controller.ts` with `@UseGuards(RolesGuard)` | Done |
+| 4 | Register `ReleasesModule` in `AppModule` | Done |
 
-### 2.2 Auth module (register, login, refresh, me)
+### 2.2 Create release
 | # | Task | Status |
 |---|---|---|
-| 1 | Create `auth.module.ts`, `auth.controller.ts`, `auth.service.ts` | Done |
-| 2 | **Register** — `POST /api/v1/auth/register` | Done |
-|   | DTO: `email` (IsEmail), `password` (MinLength 8), `name` (IsString) | |
-|   | Hash password, save user, return access + refresh tokens | |
-|   | Reject duplicate email (409 Conflict) | |
-| 3 | **Login** — `POST /api/v1/auth/login` | Done |
-|   | DTO: `email`, `password` | |
-|   | Validate credentials, return access + refresh tokens | |
-|   | Invalid credentials → 401 | |
-| 4 | **Refresh** — `POST /api/v1/auth/refresh` | Done |
-|   | DTO: `refreshToken` | |
-|   | Validate refresh token, rotate (issue new pair, invalidate old) | |
-|   | Invalid/expired → 401 | |
-| 5 | **Me** — `GET /api/v1/auth/me` (protected) | Done |
-|   | Return `{ id, email, name, createdAt }` from token | |
-| 6 | Store refresh tokens (hashed) — either in User entity or separate table | Done |
-| 7 | Invalidate refresh token on logout (optional in Phase 1, but token rotation required) | Done |
-| 8 | Rate limiting on auth endpoints (login, register, refresh) | Not Started |
-| 9 | Unit tests: register success/duplicate, login success/fail, refresh valid/expired, me returns user | Done |
-
-### 2.3 JWT strategy + guards
-| # | Task | Status |
-|---|---|---|
-| 1 | Install `@nestjs/jwt`, `@nestjs/passport`, `passport`, `passport-jwt` | Done |
-| 2 | Configure `JwtModule.register()` — secret from env, 15min expiry for access token | Done |
-| 3 | Create `JwtStrategy` (passport-jwt) — extract from Bearer header, validate, attach user to request | Done |
-| 4 | Create `JwtAuthGuard` in `common/guards/jwt-auth.guard.ts` — global guard | Done |
-| 5 | Create `@Public()` decorator in `common/decorators/public.decorator.ts` — bypass auth | Done |
-| 6 | Create `@CurrentUser()` param decorator in `common/decorators/current-user.decorator.ts` | Done |
-| 7 | Register `JwtAuthGuard` as global guard (`APP_GUARD`) | Done |
-| 8 | Mark auth routes as `@Public()` (register, login, refresh) | Done |
-| 9 | Unit tests: guard rejects missing/invalid token, allows valid token, `@Public()` bypasses | Done |
-
-### 2.4 Client: auth pages (login, register)
-| # | Task | Status |
-|---|---|---|
-| 1 | Create `(auth)/layout.tsx` — centered card layout, no sidebar | Done |
-| 2 | Create `(auth)/login/page.tsx` — email + password form, submit → `POST /auth/login` | Done |
-| 3 | Create `(auth)/register/page.tsx` — name + email + password form, submit → `POST /auth/register` | Done |
-| 4 | Create API client (`lib/api.ts`) — fetch wrapper with base URL, token attachment, 401 → refresh → retry | Done |
-| 5 | Create auth context/store — store access token in memory, refresh token in localStorage | Done |
-| 6 | Handle form validation (inline errors), loading state, server error display | Done |
-| 7 | On success: store tokens, redirect to `/projects` | Done |
-| 8 | Link between login ↔ register pages | Done |
-
-### 2.5 Client: protected route layout
-| # | Task | Status |
-|---|---|---|
-| 1 | Create `(dashboard)/layout.tsx` — sidebar navigation + top header + breadcrumbs | Done |
-| 2 | Auth check: redirect to `/login` if no valid token | Done |
-| 3 | Fetch current user via `GET /auth/me` on mount | Done |
-| 4 | Sidebar: project selector (placeholder), nav links (Projects, etc.) | Done |
-| 5 | Root page (`/`) → redirect to `/projects` | Done |
-
----
-
-## 3. Projects (end-to-end)
-
-### 3.1 Project CRUD
-| # | Task | Status |
-|---|---|---|
-| 1 | Create `project.entity.ts` — UUID PK, `name`, `description`, `createdAt` | Done |
-| 2 | Create `project-member.entity.ts` — composite relation: `userId`, `projectId`, `role` (UserRole enum) | Done |
-| 3 | Create `projects.module.ts`, `projects.controller.ts`, `projects.service.ts` | Done |
-| 4 | **Create** — `POST /api/v1/projects` | Done |
-|   | DTO: `name` (IsString), `description` (IsString, optional) | |
-|   | Creator automatically becomes `ADMIN` member | |
-| 5 | **List** — `GET /api/v1/projects` | Done |
-|   | Return only projects where current user is a member | |
-|   | Include user's role per project | |
-|   | Paginated: `?page=1&limit=20` → `{ data, meta }` | |
-| 6 | **Detail** — `GET /api/v1/projects/:id` | Done |
-|   | Include members list: `[{ userId, name, email, role }]` | |
-|   | 403 if user is not a member | |
-| 7 | **Update** — `PATCH /api/v1/projects/:id` (Admin only) | Done |
-| 8 | **Delete** — `DELETE /api/v1/projects/:id` (Admin only) | Done |
-| 9 | Unit tests: CRUD operations, membership filtering, admin-only enforcement | Done |
-
-### 3.2 Roles guard + @Roles() decorator
-| # | Task | Status |
-|---|---|---|
-| 1 | Create `@Roles()` metadata decorator in `common/decorators/roles.decorator.ts` | Done |
-| 2 | Create `RolesGuard` in `common/guards/roles.guard.ts` | Done |
-|   | Read `@Roles()` metadata from handler | |
-|   | Look up user's role in the target project (from route param `:id` or `:projectId`) | |
-|   | If no `@Roles()`, allow all authenticated users | |
-|   | If role insufficient → 403 Forbidden | |
-| 3 | Register `RolesGuard` as global guard (after `JwtAuthGuard`) | Done |
-| 4 | Unit tests: role check pass/fail, no-roles-required pass, missing membership → 403 | Done |
-
-### 3.3 Project member management
-| # | Task | Status |
-|---|---|---|
-| 1 | **Add member** — `POST /api/v1/projects/:id/members` (Admin only) | Done |
-|   | DTO: `email` (IsEmail), `role` (IsEnum UserRole) | |
-|   | Look up user by email, create ProjectMember | |
-|   | 404 if user not found, 409 if already a member | |
-| 2 | **Update role** — `PATCH /api/v1/projects/:id/members/:userId` (Admin only) | Done |
-|   | DTO: `role` (IsEnum UserRole) | |
-| 3 | **Remove member** — `DELETE /api/v1/projects/:id/members/:userId` (Admin only) | Done |
-|   | Prevent removing the last Admin | |
-| 4 | Unit tests: add/update/remove member, duplicate prevention, last-admin guard | Done |
-
-### 3.4 Client: project list + detail pages
-| # | Task | Status |
-|---|---|---|
-| 1 | Create `projects/page.tsx` — table of user's projects (name, role, created date) | Done |
-| 2 | Empty state: "No projects yet. Create one." + button | Done |
-| 3 | Create project dialog/page — name + description form | Done |
-| 4 | Create `projects/[projectId]/page.tsx` — project overview with members list | Done |
-| 5 | Create `projects/[projectId]/settings/page.tsx` — member management (invite, change role, remove) | Done |
-| 6 | Skeleton loading states for all views | Done |
-
----
-
-## 4. User Stories (end-to-end)
-
-### 4.1 User Story CRUD + verification steps
-| # | Task | Status |
-|---|---|---|
-| 1 | Create `user-story.entity.ts` — UUID PK, `projectId` (FK), `title`, `description`, `priority` (enum), `status` (StoryStatus enum), `createdAt`, `updatedAt` | Done |
-| 2 | Create `verification-step.entity.ts` — UUID PK, `storyId` (FK), `order` (int), `instruction` (text) | Done |
-| 3 | Create `user-stories.module.ts`, `user-stories.controller.ts`, `user-stories.service.ts` | Done |
-| 4 | **Create** — `POST /api/v1/projects/:projectId/stories` | Done |
-|   | Roles: Admin, PM, Developer | |
-|   | DTO: `title`, `description`, `priority`, `steps[]` (each: `order`, `instruction`) | |
-|   | Save story + steps in single transaction | |
-| 5 | **List** — `GET /api/v1/projects/:projectId/stories` | Done |
-|   | Query: `?status=ACTIVE&priority=HIGH&search=...&page=1&limit=20` | |
-|   | Return `{ data: [...], meta }` with step count per story | |
-| 6 | **Detail** — `GET /api/v1/stories/:id` | Done |
-|   | Include full steps array ordered by `order` | |
-| 7 | **Update** — `PATCH /api/v1/stories/:id` | Done |
-|   | Roles: Admin, PM, Developer | |
-|   | Partial update — all fields optional | |
-|   | Steps: with `id` → update, without `id` → create, missing from array → delete | |
-| 8 | **Delete** — `DELETE /api/v1/stories/:id` | Done |
+| 1 | **POST** `/api/v1/projects/:projectId/releases` | Done |
 |   | Roles: Admin, PM | |
-|   | Hard delete (cascade steps) | |
-| 9 | Adapt RolesGuard: `@ResolveProjectFrom('story')` + `params.projectId` fallback | Done |
-| 10 | Unit tests: CRUD, step sync logic (create/update/delete), role enforcement, pagination | Done |
+|   | DTO: `name` (IsString, MinLength 1, MaxLength 255) | |
+|   | Creates release with `status = DRAFT`, `closedAt = null` | |
+|   | Returns: `{ id, projectId, name, status, createdAt }` | |
 
-### 4.2 Client: story list + create/edit pages
+### 2.3 List releases
 | # | Task | Status |
 |---|---|---|
-| 1 | Create `stories/page.tsx` — table (title, priority badge, status badge, step count, actions) | Done |
-| 2 | Row action dropdown (view, edit, delete) | Done |
-| 3 | Empty state: "No stories yet. Create one." + button | Done |
-| 4 | Create `stories/new/page.tsx` — form: title, description, priority selector | Done |
-| 5 | Dynamic step list: add/remove verification steps (StepBuilder component) | Done |
-| 6 | Create `stories/[storyId]/page.tsx` — detail/edit view with steps | Done |
-| 7 | Inline validation, submit button bottom-right | Done |
-| 8 | Delete confirmation dialog | Done |
-| 9 | Toast notifications: success/error on create/update/delete | Done |
-| 10 | Skeleton loading states | Done |
-| 11 | Status/priority filter bar + search input | Done |
-| 12 | PriorityBadge + StatusBadge shared components | Done |
-| 13 | Navigation link on project detail page | Done |
+| 1 | **GET** `/api/v1/projects/:projectId/releases` | Done |
+|   | Roles: Admin, PM, Developer, Tester (any project member) | |
+|   | Query: `?status=DRAFT&page=1&limit=20` | |
+|   | Return: `{ data: [{ id, name, status, storyCount, createdAt, closedAt }], meta }` | |
+|   | `storyCount`: count of scoped stories (draft) or snapshot stories (closed) | |
+
+### 2.4 Get release detail
+| # | Task | Status |
+|---|---|---|
+| 1 | **GET** `/api/v1/releases/:id` | Done |
+|   | Roles: any project member, resolved via `@ResolveProjectFrom('release')` | |
+|   | **Draft**: return release info + scoped stories (from join table → master UserStory data) | |
+|   | **Closed**: return release info + ReleaseStory snapshots with ReleaseStoryStep arrays | |
+|   | Include `closedAt` (null for draft) | |
+
+### 2.5 Update release
+| # | Task | Status |
+|---|---|---|
+| 1 | **PATCH** `/api/v1/releases/:id` | Done |
+|   | Roles: Admin, PM | |
+|   | `@ResolveProjectFrom('release')` | |
+|   | DTO: `name` (IsString, IsOptional, MinLength 1, MaxLength 255) | |
+|   | Guard: only when `status = DRAFT` → else 409 Conflict ("Release is already closed") | |
+
+### 2.6 Delete release
+| # | Task | Status |
+|---|---|---|
+| 1 | **DELETE** `/api/v1/releases/:id` | Done |
+|   | Roles: Admin, PM | |
+|   | `@ResolveProjectFrom('release')` | |
+|   | Guard: only when `status = DRAFT` → else 409 Conflict | |
+|   | Hard delete — cascades scoping rows and any snapshot rows | |
+
+### 2.7 DTOs
+| # | Task | Status |
+|---|---|---|
+| 1 | Create `releases/dto/create-release.dto.ts` — `name: string` | Done |
+| 2 | Create `releases/dto/update-release.dto.ts` — `name?: string` | Done |
+| 3 | Create `releases/dto/release-query.dto.ts` — `status?: ReleaseStatus`, `page`, `limit` | Done |
+| 4 | Create `releases/dto/add-stories.dto.ts` — `storyIds: string[]` (IsArray, each IsUUID) | Done |
+
+### 2.8 Unit tests
+| # | Task | Status |
+|---|---|---|
+| 1 | Service tests: create, list with pagination, detail (draft + closed), update, delete | Done |
+| 2 | Service tests: draft-only enforcement (update/delete on closed → 409) | Done |
+| 3 | Controller tests: route wiring, DTO validation, HTTP status codes | Done |
+
+---
+
+## 3. Story-to-Release Scoping
+
+### 3.1 Add stories to release
+| # | Task | Status |
+|---|---|---|
+| 1 | **POST** `/api/v1/releases/:id/stories` | Done |
+|   | Roles: Admin, PM | |
+|   | `@ResolveProjectFrom('release')` | |
+|   | DTO: `storyIds` (IsArray, ArrayMinSize 1, each IsUUID) | |
+|   | Validate: release is DRAFT → else 409 | |
+|   | Validate: all stories exist and belong to the same project as the release | |
+|   | Skip already-scoped stories (idempotent) | |
+|   | Return: `{ added: <number of newly added> }` | |
+
+### 3.2 Remove story from release
+| # | Task | Status |
+|---|---|---|
+| 1 | **DELETE** `/api/v1/releases/:id/stories/:storyId` | Done |
+|   | Roles: Admin, PM | |
+|   | `@ResolveProjectFrom('release')` | |
+|   | Validate: release is DRAFT → else 409 | |
+|   | Remove scoping link from join table | |
+|   | 404 if story not in release scope | |
+
+### 3.3 Unit tests
+| # | Task | Status |
+|---|---|---|
+| 1 | Add stories: success, skip duplicates, cross-project rejection, closed-release rejection | Done |
+| 2 | Remove story: success, not-in-scope 404, closed-release rejection | Done |
+
+---
+
+## 4. Release Close → Snapshot
+
+### 4.1 Close endpoint
+| # | Task | Status |
+|---|---|---|
+| 1 | **POST** `/api/v1/releases/:id/close` | Done |
+|   | Roles: Admin, PM | |
+|   | `@ResolveProjectFrom('release')` | |
+|   | Validate: release is DRAFT → else 409 ("Release is already closed") | |
+|   | Validate: at least 1 story in scope → else 400 ("Cannot close release with no stories") | |
+| 2 | **Transaction** (via `DataSource.transaction`): | Done |
+|   | For each scoped story: | |
+|   |   — Read master UserStory + VerificationSteps | |
+|   |   — Create `ReleaseStory` (copy title, description, priority, sourceStoryId) | |
+|   |   — Create `ReleaseStoryStep` per step (copy order, instruction) | |
+|   | Set `release.status = CLOSED` | |
+|   | Set `release.closedAt = new Date()` | |
+| 3 | Return: `{ id, name, status, closedAt, storyCount }` | Done |
+| 4 | Log: `Release closed: id=<id>, project=<projectId>, stories=<count>` | Done |
+
+### 4.2 Unit tests
+| # | Task | Status |
+|---|---|---|
+| 1 | Close success: snapshots created with correct data, status updated, closedAt set | Done |
+| 2 | Close with empty scope → 400 | Done |
+| 3 | Close already-closed release → 409 | Done |
+| 4 | Snapshot integrity: verify copied fields match master story/step data | Done |
+
+---
+
+## 5. Client: Release Types + Hooks
+
+### 5.1 Release types
+| # | Task | Status |
+|---|---|---|
+| 1 | Create `client/src/types/releases.ts` — `Release`, `ReleaseDetail`, `ReleaseStory`, `ReleaseStoryStep`, `CreateReleasePayload`, `AddStoriesPayload` | Done |
+
+### 5.2 Release hooks
+| # | Task | Status |
+|---|---|---|
+| 1 | Create `client/src/hooks/use-releases.ts` — query key factory (`releaseKeys`) | Done |
+| 2 | `useReleases(projectId, params)` — paginated list query | Done |
+| 3 | `useRelease(releaseId)` — detail query | Done |
+| 4 | `useCreateRelease(projectId)` — mutation + invalidation + toast | Done |
+| 5 | `useUpdateRelease(releaseId)` — mutation + invalidation + toast | Done |
+| 6 | `useDeleteRelease(projectId)` — mutation + invalidation + toast | Done |
+| 7 | `useAddStoriesToRelease(releaseId)` — mutation + invalidation + toast | Done |
+| 8 | `useRemoveStoryFromRelease(releaseId)` — mutation + invalidation + toast | Done |
+| 9 | `useCloseRelease(releaseId)` — mutation + invalidation + toast | Done |
+
+---
+
+## 6. Client: Release List + Create
+
+### 6.1 Release list page
+| # | Task | Status |
+|---|---|---|
+| 1 | Create `releases/page.tsx` — table (name, status badge, story count, created date, closed date) | Done |
+| 2 | Row actions: view detail, delete (draft only) | Done |
+| 3 | Status filter dropdown (All, Draft, Closed) | Done |
+| 4 | Empty state: "No releases yet. Create one." + button | Done |
+| 5 | Skeleton loading state | Done |
+
+### 6.2 Create release
+| # | Task | Status |
+|---|---|---|
+| 1 | Create release dialog (triggered from list page) — name input, submit | Done |
+| 2 | Inline validation, loading state, error display | Done |
+| 3 | On success: redirect to release detail page | Done |
+
+---
+
+## 7. Client: Release Detail + Scoping
+
+### 7.1 Release detail page
+| # | Task | Status |
+|---|---|---|
+| 1 | Create `releases/[releaseId]/page.tsx` — release overview header (name, status badge, dates) | Done |
+| 2 | **Draft state**: show scoped stories table (title, priority badge, step count, remove action) | Done |
+| 3 | **Closed state**: show snapshot stories table (title, priority badge, step count — read-only) | Done |
+| 4 | Skeleton loading state | Done |
+
+### 7.2 Scoping UI (draft only)
+| # | Task | Status |
+|---|---|---|
+| 1 | "Add Stories" button → dialog showing project stories not yet in release | Done |
+| 2 | Multi-select story list with checkboxes, search/filter | Done |
+| 3 | Submit → `POST /releases/:id/stories` with selected IDs | Done |
+| 4 | Remove action per row → `DELETE /releases/:id/stories/:storyId` with confirmation | Done |
+
+### 7.3 Close release action
+| # | Task | Status |
+|---|---|---|
+| 1 | "Close Release" button (visible only in draft state, disabled if 0 stories) | Done |
+| 2 | Confirmation dialog: "This will freeze the scope. This action cannot be undone." | Done |
+| 3 | On success: refresh page to show closed state with snapshots | Done |
+
+---
+
+## 8. Client: Release Dashboard (Closed)
+
+### 8.1 Dashboard view
+| # | Task | Status |
+|---|---|---|
+| 1 | Summary card: total stories, breakdown by priority | Done |
+| 2 | Story list with priority badges, step count, expandable step details | Done |
+| 3 | Status badges for release state | Done |
+|   | Note: test execution status per story will be added in Phase 3 | |
+
+---
+
+## 9. Navigation + Integration
+
+### 9.1 Navigation links
+| # | Task | Status |
+|---|---|---|
+| 1 | Add "Releases" link to project sidebar navigation | Done |
+| 2 | Add release count or link on project detail page | Done |
+| 3 | ReleaseStatusBadge shared component (Draft = neutral/blue, Closed = green/solid) | Done |
 
 ---
 
 ## Execution Order
 ```
-Infrastructure ──► Auth ──► Projects ──► User Stories
-     1.1              2.1       3.1            4.1
-     1.2              2.2       3.2            4.2
-     1.3              2.3       3.3
-                      2.4       3.4
-                      2.5
+Entities + Guard ──► Release CRUD ──► Scoping ──► Close/Snapshot ──► Client
+     1.1                 2.1            3.1           4.1             5.1
+     1.2                 2.2            3.2           4.2             5.2
+     1.3                 2.3            3.3                           6.1
+     1.4                 2.4                                         6.2
+                         2.5                                         7.1
+                         2.6                                         7.2
+                         2.7                                         7.3
+                         2.8                                         8.1
+                                                                     9.1
 ```
-Each feature is fully completed (server + client + tests) before moving to the next.
+Server-side features are built and tested sequentially (entities → CRUD → scoping → close).
+Client features are built after all server endpoints are complete.
 
 ## Definition of Done (per feature)
 - All server endpoints implemented with DTOs and validation
-- Unit tests passing for service methods, guards, and pipes
+- Unit tests passing for service methods, guards, and controller routes
 - Client pages functional with loading/error/empty states
 - Lint passes (`npm run lint`) in both client and server
 - Manual smoke test via Docker Compose
