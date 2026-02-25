@@ -1,18 +1,21 @@
 import { Badge } from '@/components/ui/badge';
 import { StoryStatus } from '@/types/user-stories';
 
-const statusConfig: Record<StoryStatus, { label: string; className: string }> = {
+const statusConfig: Record<StoryStatus, { label: string; dotColor: string; className: string }> = {
   [StoryStatus.DRAFT]: {
     label: 'Draft',
-    className: 'bg-gray-100 text-gray-800 border-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-700',
+    dotColor: 'bg-slate-400',
+    className: 'bg-slate-100 text-slate-700 border-slate-200',
   },
   [StoryStatus.ACTIVE]: {
     label: 'Active',
-    className: 'bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-950 dark:text-blue-300 dark:border-blue-800',
+    dotColor: 'bg-blue-500',
+    className: 'bg-blue-100 text-blue-700 border-blue-200',
   },
   [StoryStatus.DEPRECATED]: {
     label: 'Deprecated',
-    className: 'bg-gray-50 text-gray-500 border-gray-200 dark:bg-gray-900 dark:text-gray-500 dark:border-gray-700',
+    dotColor: 'bg-slate-300',
+    className: 'bg-slate-200 text-slate-500 border-slate-200',
   },
 };
 
@@ -20,6 +23,7 @@ export function StatusBadge({ status }: { status: StoryStatus }) {
   const config = statusConfig[status];
   return (
     <Badge variant="outline" className={config.className}>
+      <span className={`mr-1.5 inline-block h-1.5 w-1.5 rounded-full ${config.dotColor}`} />
       {config.label}
     </Badge>
   );

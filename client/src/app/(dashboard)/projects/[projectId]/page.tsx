@@ -2,7 +2,7 @@
 
 import { use } from 'react';
 import Link from 'next/link';
-import { FileText, Package, Settings } from 'lucide-react';
+import { FileText, Package, Settings, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Table,
@@ -45,7 +45,7 @@ export default function ProjectDetailPage({
   const isAdmin = currentMember?.role === UserRole.ADMIN;
 
   return (
-    <div>
+    <div className="max-w-5xl">
       <Breadcrumbs
         items={[
           { label: 'Projects', href: '/projects' },
@@ -80,12 +80,13 @@ export default function ProjectDetailPage({
           <div className="rounded-md bg-muted p-2">
             <FileText className="h-5 w-5 text-muted-foreground" />
           </div>
-          <div>
+          <div className="flex-1">
             <p className="font-medium">User Stories</p>
             <p className="text-sm text-muted-foreground">
               Manage stories and verification steps
             </p>
           </div>
+          <ChevronRight className="h-4 w-4 text-muted-foreground" />
         </Link>
         <Link
           href={`/projects/${projectId}/releases`}
@@ -94,12 +95,13 @@ export default function ProjectDetailPage({
           <div className="rounded-md bg-muted p-2">
             <Package className="h-5 w-5 text-muted-foreground" />
           </div>
-          <div>
+          <div className="flex-1">
             <p className="font-medium">Releases</p>
             <p className="text-sm text-muted-foreground">
               Group stories into testable releases
             </p>
           </div>
+          <ChevronRight className="h-4 w-4 text-muted-foreground" />
         </Link>
       </div>
 
