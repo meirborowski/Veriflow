@@ -12,7 +12,7 @@ interface PaginationProps {
 export function Pagination({ page, totalPages, onPageChange }: PaginationProps) {
   return (
     <div className="flex items-center justify-between">
-      <p className="text-sm text-muted-foreground">
+      <p className="text-sm tabular-nums text-muted-foreground">
         Page {page} of {totalPages}
       </p>
       <div className="flex items-center gap-2">

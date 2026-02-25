@@ -242,6 +242,7 @@ test: add e2e tests for release close endpoint
 - [project_spec.md](project_spec.md) — Full specification: data model, API design, WebSocket events, logging, development phases
 - [architecture.md](architecture.md) — System diagram, layer responsibilities, data flows, DB schema, WebSocket internals
 - [project_status.md](project_status.md) — Phase progress, task tracking, blockers, decisions log
+- [ui-ux-guideline.md](ui-ux-guideline.md) — Modern, tool-focused design principles and UI/UX guidelines
 - [changelog.md](changelog.md) — Running log of all changes to the project
 
 ### Changelog Rule

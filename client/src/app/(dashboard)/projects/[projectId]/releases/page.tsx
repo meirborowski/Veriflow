@@ -38,7 +38,7 @@ export default function ReleasesPage({
   });
 
   return (
-    <div>
+    <div className="max-w-6xl">
       <Breadcrumbs
         items={[
           { label: 'Projects', href: '/projects' },

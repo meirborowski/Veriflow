@@ -24,11 +24,11 @@ export function ReleaseSummary({ stories }: ReleaseSummaryProps) {
     <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
       <div className="rounded-lg border p-4">
         <p className="text-sm text-muted-foreground">Total Stories</p>
-        <p className="mt-1 text-2xl font-semibold">{stories.length}</p>
+        <p className="mt-1 text-2xl font-semibold tabular-nums">{stories.length}</p>
       </div>
       <div className="rounded-lg border p-4">
         <p className="text-sm text-muted-foreground">Total Steps</p>
-        <p className="mt-1 text-2xl font-semibold">{totalSteps}</p>
+        <p className="mt-1 text-2xl font-semibold tabular-nums">{totalSteps}</p>
       </div>
       <div className="col-span-2 rounded-lg border p-4">
         <p className="text-sm text-muted-foreground">By Priority</p>

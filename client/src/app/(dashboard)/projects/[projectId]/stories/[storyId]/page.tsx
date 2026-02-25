@@ -44,7 +44,7 @@ export default function StoryDetailPage({
   }
 
   return (
-    <div>
+    <div className="max-w-4xl">
       <Breadcrumbs
         items={[
           { label: 'Projects', href: '/projects' },
@@ -93,7 +93,7 @@ export default function StoryDetailPage({
             <h2 className="text-lg font-medium">
               Verification Steps ({story.steps.length})
             </h2>
-            <ol className="mt-4 space-y-3">
+            <ol className="mt-4 space-y-3 border-l-2 border-muted pl-4">
               {story.steps.map((step) => (
                 <li key={step.id} className="flex items-start gap-3">
                   <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-medium">

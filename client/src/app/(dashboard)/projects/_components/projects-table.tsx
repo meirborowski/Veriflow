@@ -79,7 +79,7 @@ export function ProjectsTable({ projects }: { projects: ProjectWithRole[] }) {
               <TableCell>
                 <RoleBadge role={project.role} />
               </TableCell>
-              <TableCell className="text-muted-foreground">
+              <TableCell className="tabular-nums text-muted-foreground">
                 {formatDate(project.createdAt)}
               </TableCell>
               <TableCell>

@@ -35,7 +35,7 @@ export function StepBuilder({ steps, onChange }: StepBuilderProps) {
   return (
     <div className="space-y-3">
       <Label>Verification Steps</Label>
-      <div className="space-y-2">
+      <div className="space-y-2 rounded-lg bg-slate-50 p-4">
         {steps.map((step, index) => (
           <div key={index} className="flex items-start gap-2">
             <div className="flex h-9 w-8 shrink-0 items-center justify-center text-sm text-muted-foreground">
