@@ -49,7 +49,7 @@ export default function ProjectSettingsPage({
   }
 
   return (
-    <div>
+    <div className="max-w-3xl">
       <Breadcrumbs
         items={[
           { label: 'Projects', href: '/projects' },

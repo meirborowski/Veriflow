@@ -63,7 +63,7 @@ export function DraftStoriesTable({
               <TableCell>
                 <PriorityBadge priority={story.priority} />
               </TableCell>
-              <TableCell className="text-muted-foreground">
+              <TableCell className="tabular-nums text-muted-foreground">
                 {story.stepCount}
               </TableCell>
               <TableCell>

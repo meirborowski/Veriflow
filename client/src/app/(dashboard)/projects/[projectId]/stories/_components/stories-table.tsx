@@ -90,10 +90,10 @@ export function StoriesTable({ stories, projectId }: StoriesTableProps) {
               <TableCell>
                 <StatusBadge status={story.status} />
               </TableCell>
-              <TableCell className="text-muted-foreground">
+              <TableCell className="tabular-nums text-muted-foreground">
                 {story.stepCount}
               </TableCell>
-              <TableCell className="text-muted-foreground">
+              <TableCell className="tabular-nums text-muted-foreground">
                 {formatDate(story.createdAt)}
               </TableCell>
               <TableCell>

@@ -103,7 +103,7 @@ export function SnapshotStoriesTable({ stories }: SnapshotStoriesTableProps) {
               <TableCell className="align-top">
                 <PriorityBadge priority={story.priority} />
               </TableCell>
-              <TableCell className="align-top text-muted-foreground">
+              <TableCell className="align-top tabular-nums text-muted-foreground">
                 {story.steps.length}
               </TableCell>
             </TableRow>
