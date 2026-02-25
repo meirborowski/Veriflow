@@ -15,7 +15,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { useProject } from '@/hooks/use-projects';
 
-const UUID_PATTERN = /^\/projects\/([0-9a-f-]{36})/;
+const UUID_PATTERN = /^\/projects\/([0-9a-f-]{36})/i;
 
 function extractProjectId(pathname: string): string | null {
   const match = pathname.match(UUID_PATTERN);
