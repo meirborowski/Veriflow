@@ -60,7 +60,7 @@ export default function ReleaseDetailPage({
   const storyCount = release.stories.length;
 
   return (
-    <div>
+    <div className="max-w-5xl">
       <Breadcrumbs
         items={[
           { label: 'Projects', href: '/projects' },

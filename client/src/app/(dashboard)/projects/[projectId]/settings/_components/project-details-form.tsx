@@ -59,9 +59,11 @@ export function ProjectDetailsForm({
             rows={3}
           />
         </div>
-        <Button type="submit" disabled={!hasChanges || updateProject.isPending}>
-          {updateProject.isPending ? 'Saving...' : 'Save'}
-        </Button>
+        <div className="flex justify-end">
+          <Button type="submit" disabled={!hasChanges || updateProject.isPending}>
+            {updateProject.isPending ? 'Saving...' : 'Save'}
+          </Button>
+        </div>
       </div>
     </form>
   );

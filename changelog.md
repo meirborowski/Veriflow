@@ -1,5 +1,22 @@
 # Changelog
 
+## 2026-02-25
+- feat: redesign dashboard sidebar with project-scoped navigation (Overview, Stories, Releases, Settings)
+- feat: add route-aware sidebar that switches between global and project-scoped nav based on URL
+- feat: polish auth pages with slate-50 background, card shadow, branded icon mark, and error alert icons
+- feat: update breadcrumbs to use ChevronRight separator with truncation support
+- feat: add colored dot indicators to StatusBadge, PriorityBadge, and ReleaseStatusBadge for accessibility
+- feat: align badge colors to guideline semantic palette (rose/orange/amber heat scale for priority, slate/blue/emerald for status)
+- feat: redesign RoleBadge with per-role color coding (purple Admin, blue PM, slate Developer, emerald Tester)
+- feat: add tabular-nums to all numeric and date cells across tables and summary metrics
+- feat: add max-width constraints to all page layouts for readability on wide screens
+- feat: add ChevronRight affordance icons on project overview navigation cards
+- feat: add connecting left border to verification steps timeline on story detail page
+- feat: wrap step builder in subtle bg-slate-50 container for visual grouping
+- feat: right-align submit button on project details settings form
+- feat: add tabular-nums to pagination page counter
+- docs: add ui-ux-guideline.md with modern, tool-focused design principles and reference it in CLAUDE.md
+
 ## 2026-02-19
 - feat: add release types and TanStack Query hooks (list, detail, create, update, delete, close, add/remove stories)
 - feat: add release list page with status filter, pagination, empty state, and skeleton loading

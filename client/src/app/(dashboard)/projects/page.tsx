@@ -16,7 +16,7 @@ export default function ProjectsPage() {
   const { data, isLoading, isError, refetch } = useProjects(page, PAGE_SIZE);
 
   return (
-    <div>
+    <div className="max-w-6xl">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold tracking-tight">Projects</h1>
         <CreateProjectDialog />

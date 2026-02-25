@@ -84,13 +84,13 @@ export function ReleasesTable({ releases, projectId }: ReleasesTableProps) {
               <TableCell>
                 <ReleaseStatusBadge status={release.status} />
               </TableCell>
-              <TableCell className="text-muted-foreground">
+              <TableCell className="tabular-nums text-muted-foreground">
                 {release.storyCount}
               </TableCell>
-              <TableCell className="text-muted-foreground">
+              <TableCell className="tabular-nums text-muted-foreground">
                 {formatDate(release.createdAt)}
               </TableCell>
-              <TableCell className="text-muted-foreground">
+              <TableCell className="tabular-nums text-muted-foreground">
                 {release.closedAt ? formatDate(release.closedAt) : '\u2014'}
               </TableCell>
               <TableCell>

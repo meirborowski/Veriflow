@@ -52,7 +52,7 @@ export default function StoriesPage({
   });
 
   return (
-    <div>
+    <div className="max-w-6xl">
       <Breadcrumbs
         items={[
           { label: 'Projects', href: '/projects' },
