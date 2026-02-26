@@ -1,5 +1,36 @@
 # Changelog
 
+## 2026-02-26
+- feat: add TestExecution and StepResult entities with TypeORM relations (test_executions, step_results tables)
+- feat: add WebSocket gateway (/test-runner namespace) with JWT auth, heartbeat, disconnect cleanup
+- feat: add real-time story assignment with FOR UPDATE SKIP LOCKED to prevent double-booking
+- feat: add step-by-step execution flow (update-step upserts StepResult per verification step)
+- feat: add final verdict submission (PASS/FAIL/PARTIAL/CANT_TEST) with completedAt timestamp
+- feat: add tester cleanup on disconnect (hard-delete IN_PROGRESS execution, unlock story)
+- feat: add heartbeat checker (30s interval, 2min timeout) with automatic disconnect
+- feat: add startup orphan cleanup (delete stale IN_PROGRESS executions older than 2min)
+- feat: add REST endpoints for execution history (paginated), latest per-story, and execution detail
+- feat: add @ResolveProjectFrom('execution') for execution-scoped role checking in RolesGuard
+- feat: add DTOs for join-session, request-work, update-step, submit-result, heartbeat, execution-query
+- feat: add TestExecutionModule with TypeORM, JwtModule, gateway, service, controller
+- feat: install @nestjs/websockets, @nestjs/platform-socket.io, socket.io on server
+- feat: add client SocketProvider context with JWT auth, heartbeat (15s), emit methods, event subscriptions
+- feat: add useTestRunner orchestration hook (state machine: idle → executing → pool-empty)
+- feat: add TanStack Query hooks for execution REST endpoints (useExecutions, useLatestExecutions, useExecution)
+- feat: add test-execution TypeScript types (TestStatus, StepStatus, BugSeverity, WS payloads, REST responses)
+- feat: add TestStatusBadge shared component (Untested=gray, In Progress=blue, Pass=green, Fail=red, Partial=amber, Can't Test=muted)
+- feat: add test runner page with SocketProvider wrapper, release CLOSED guard, breadcrumbs
+- feat: add TestRunnerContent with three states (idle/executing/pool-empty), connection indicator
+- feat: add StepChecklist with vertical step layout, Pass/Fail/Skip toggles, optional comments
+- feat: add SubmissionPanel with verdict selector, comment field, bug report form on Fail
+- feat: add ProgressSidebar with progress bar, summary counts, per-story status list
+- feat: add ActiveTesters presence indicator
+- feat: add "Open Test Runner" button on closed release detail page
+- feat: install socket.io-client on client
+- test: add 25 unit tests for TestExecutionService (assign, update-step, submit, cleanup, queries)
+- test: add 10 unit tests for TestExecutionGateway (auth, join, request-work, submit, heartbeat)
+- test: add 3 unit tests for TestExecutionController
+
 ## 2026-02-25
 - feat: redesign dashboard sidebar with project-scoped navigation (Overview, Stories, Releases, Settings)
 - feat: add route-aware sidebar that switches between global and project-scoped nav based on URL
