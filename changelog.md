@@ -30,6 +30,11 @@
 - test: add 25 unit tests for TestExecutionService (assign, update-step, submit, cleanup, queries)
 - test: add 10 unit tests for TestExecutionGateway (auth, join, request-work, submit, heartbeat)
 - test: add 3 unit tests for TestExecutionController
+- fix: register TestExecution entity in ProjectsModule, UserStoriesModule, ReleasesModule for RolesGuard DI
+- fix: use pessimistic_partial_write (FOR UPDATE SKIP LOCKED) instead of pessimistic_write_or_fail for non-blocking concurrent assignment
+- fix: add project membership verification in gateway join-session handler
+- fix: correct story pool filter to exclude IN_PROGRESS/PASS/CANT_BE_TESTED (FAIL/PARTIALLY_TESTED re-enter pool)
+- fix: remove extra argument in heartbeat gateway test
 
 ## 2026-02-25
 - feat: redesign dashboard sidebar with project-scoped navigation (Overview, Stories, Releases, Settings)
