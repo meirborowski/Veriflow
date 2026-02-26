@@ -1,8 +1,11 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
+import { getRepositoryToken } from '@nestjs/typeorm';
 import { TestExecutionGateway } from './test-execution.gateway';
 import { TestExecutionService } from './test-execution.service';
+import { Release } from '../releases/entities/release.entity';
+import { ProjectMember } from '../projects/entities/project-member.entity';
 import { TestStatus } from '../common/types/enums';
 
 describe('TestExecutionGateway', () => {
@@ -22,6 +25,14 @@ describe('TestExecutionGateway', () => {
 
   const mockConfigService = {
     get: jest.fn().mockReturnValue('test-secret'),
+  };
+
+  const mockReleaseRepository = {
+    findOne: jest.fn(),
+  };
+
+  const mockMemberRepository = {
+    findOne: jest.fn(),
   };
 
   const mockRoom = {
@@ -51,6 +62,8 @@ describe('TestExecutionGateway', () => {
         { provide: TestExecutionService, useValue: mockExecutionService },
         { provide: JwtService, useValue: mockJwtService },
         { provide: ConfigService, useValue: mockConfigService },
+        { provide: getRepositoryToken(Release), useValue: mockReleaseRepository },
+        { provide: getRepositoryToken(ProjectMember), useValue: mockMemberRepository },
       ],
     }).compile();
 
@@ -151,9 +164,18 @@ describe('TestExecutionGateway', () => {
   });
 
   describe('join-session', () => {
-    it('should join room and broadcast tester-joined', async () => {
+    it('should join room and broadcast tester-joined when authorized', async () => {
       const client = createMockSocket({
         data: { userId: 'user-1' },
+      });
+
+      mockReleaseRepository.findOne.mockResolvedValue({
+        id: 'rel-1',
+        projectId: 'proj-1',
+      });
+      mockMemberRepository.findOne.mockResolvedValue({
+        userId: 'user-1',
+        projectId: 'proj-1',
       });
 
       await gateway.handleJoinSession(client as never, { releaseId: 'rel-1' });
@@ -165,6 +187,25 @@ describe('TestExecutionGateway', () => {
       expect(mockServer.to).toHaveBeenCalledWith('release:rel-1');
       expect(mockRoom.emit).toHaveBeenCalledWith('tester-joined', {
         userId: 'user-1',
+      });
+    });
+
+    it('should reject non-member with error', async () => {
+      const client = createMockSocket({
+        data: { userId: 'user-1' },
+      });
+
+      mockReleaseRepository.findOne.mockResolvedValue({
+        id: 'rel-1',
+        projectId: 'proj-1',
+      });
+      mockMemberRepository.findOne.mockResolvedValue(null);
+
+      await gateway.handleJoinSession(client as never, { releaseId: 'rel-1' });
+
+      expect(client.join).not.toHaveBeenCalled();
+      expect(client.emit).toHaveBeenCalledWith('error', {
+        message: 'Not a member of this project',
       });
     });
   });
@@ -263,7 +304,7 @@ describe('TestExecutionGateway', () => {
         data: { userId: 'user-1', releaseId: 'rel-1' },
       });
 
-      gateway.handleHeartbeat(client as never, { releaseId: 'rel-1' });
+      gateway.handleHeartbeat(client as never);
 
       // No error thrown means success - heartbeat is recorded internally
       expect(true).toBe(true);
