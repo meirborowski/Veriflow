@@ -7,6 +7,7 @@ import { UserStory } from './entities/user-story.entity';
 import { VerificationStep } from './entities/verification-step.entity';
 import { ProjectMember } from '../projects/entities/project-member.entity';
 import { Release } from '../releases/entities/release.entity';
+import { TestExecution } from '../test-execution/entities/test-execution.entity';
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { Release } from '../releases/entities/release.entity';
       VerificationStep,
       ProjectMember,
       Release,
+      TestExecution,
     ]),
   ],
   controllers: [UserStoriesController],
