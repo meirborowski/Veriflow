@@ -1,7 +1,8 @@
 'use client';
 
 import { use } from 'react';
-import { Package } from 'lucide-react';
+import Link from 'next/link';
+import { Package, Play } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Breadcrumbs } from '@/components/breadcrumbs';
 import { ReleaseStatusBadge } from '@/components/release-status-badge';
@@ -77,7 +78,7 @@ export default function ReleaseDetailPage({
         <h1 className="text-2xl font-semibold tracking-tight">
           {release.name}
         </h1>
-        {isDraft && (
+        {isDraft ? (
           <div className="flex items-center gap-2">
             <AddStoriesDialog
               releaseId={releaseId}
@@ -89,6 +90,15 @@ export default function ReleaseDetailPage({
               disabled={storyCount === 0}
             />
           </div>
+        ) : (
+          <Button asChild>
+            <Link
+              href={`/projects/${projectId}/releases/${releaseId}/test-runner`}
+            >
+              <Play className="mr-2 h-4 w-4" />
+              Open Test Runner
+            </Link>
+          </Button>
         )}
       </div>
 
