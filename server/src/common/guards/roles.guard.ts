@@ -15,6 +15,7 @@ import { UserRole } from '../types/enums';
 import { ProjectMember } from '../../projects/entities/project-member.entity';
 import { UserStory } from '../../user-stories/entities/user-story.entity';
 import { Release } from '../../releases/entities/release.entity';
+import { TestExecution } from '../../test-execution/entities/test-execution.entity';
 import type { JwtPayload } from '../decorators/current-user.decorator';
 
 @Injectable()
@@ -27,6 +28,8 @@ export class RolesGuard implements CanActivate {
     private readonly storyRepository: Repository<UserStory>,
     @InjectRepository(Release)
     private readonly releaseRepository: Repository<Release>,
+    @InjectRepository(TestExecution)
+    private readonly executionRepository: Repository<TestExecution>,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -77,6 +80,31 @@ export class RolesGuard implements CanActivate {
 
       const release = await this.releaseRepository.findOne({
         where: { id: releaseId },
+        select: ['id', 'projectId'],
+      });
+
+      if (!release) {
+        throw new NotFoundException('Release not found');
+      }
+
+      projectId = release.projectId;
+    } else if (resolveFrom === 'execution') {
+      const executionId = request.params.id as string | undefined;
+      if (!executionId) {
+        throw new ForbiddenException('Execution ID is required');
+      }
+
+      const execution = await this.executionRepository.findOne({
+        where: { id: executionId },
+        select: ['id', 'releaseId'],
+      });
+
+      if (!execution) {
+        throw new NotFoundException('Execution not found');
+      }
+
+      const release = await this.releaseRepository.findOne({
+        where: { id: execution.releaseId },
         select: ['id', 'projectId'],
       });
 

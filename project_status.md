@@ -1,7 +1,7 @@
 # Veriflow — Project Status
 
 ## Current Phase
-**Phase 2 — Release Engine**
+**Phase 3 — Test Runner**
 
 ## Phase Progress
 
@@ -68,19 +68,36 @@
 
 ### Phase 3 — Test Runner
 
-#### Real-time Test Execution (end-to-end)
+#### Real-time Test Execution — Server
 | Task | Status | Notes |
 |---|---|---|
-| WebSocket gateway setup | Not Started | Socket.io + NestJS Gateway |
-| WebSocket auth middleware | Not Started | Token validation on connect |
-| Real-time story assignment (lock/unlock) | Not Started | `FOR UPDATE SKIP LOCKED` |
-| Step-by-step execution flow | Not Started | |
-| Heartbeat + disconnect cleanup | Not Started | 15s interval, 2min timeout |
-| Live dashboard updates | Not Started | Broadcast to room |
-| Client: test runner page | Not Started | |
-| Client: step checklist UI | Not Started | |
-| Client: live progress sidebar | Not Started | |
-| Client: real-time presence | Not Started | |
+| TestExecution + StepResult entities | Done | UUID PKs, enum columns, FK relations |
+| WebSocket gateway setup | Done | Socket.io + NestJS Gateway, /test-runner namespace |
+| WebSocket auth middleware | Done | JWT verification on handleConnection |
+| Real-time story assignment (lock/unlock) | Done | FOR UPDATE SKIP LOCKED, priority ordering |
+| Step-by-step execution flow | Done | Upsert StepResult per step |
+| Final verdict submission | Done | PASS/FAIL/PARTIAL/CANT_TEST with completedAt |
+| Heartbeat + disconnect cleanup | Done | 30s check, 2min timeout, hard-delete on disconnect |
+| Startup orphan cleanup | Done | Delete stale IN_PROGRESS on module init |
+| REST endpoints (history, latest, detail) | Done | Paginated, with filters |
+| RolesGuard execution resolution | Done | @ResolveProjectFrom('execution') |
+| DTOs + validation | Done | 6 DTO files with class-validator |
+| Unit tests | Done | 38 tests (service + gateway + controller) |
+
+#### Real-time Test Execution — Client
+| Task | Status | Notes |
+|---|---|---|
+| Socket.io-client + SocketProvider | Done | JWT auth, heartbeat (15s), event subscriptions |
+| useTestRunner orchestration hook | Done | State machine: idle → executing → pool-empty |
+| TanStack Query hooks | Done | useExecutions, useLatestExecutions, useExecution |
+| Types | Done | TestStatus, StepStatus, BugSeverity, WS payloads, REST types |
+| TestStatusBadge component | Done | Per-status colors matching CLAUDE.md style guide |
+| Test runner page | Done | Breadcrumbs, CLOSED guard, SocketProvider wrapper |
+| Step checklist UI | Done | Pass/Fail/Skip toggles, comment support |
+| Submission panel | Done | Verdict selector, bug report form (on Fail) |
+| Live progress sidebar | Done | Progress bar, summary counts, per-story status |
+| Real-time presence | Done | ActiveTesters with online count |
+| Navigation integration | Done | "Open Test Runner" button on closed release |
 
 ### Phase 4 — Defect Tracking
 
