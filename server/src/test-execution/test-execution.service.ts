@@ -131,19 +131,26 @@ export class TestExecutionService implements OnModuleInit {
         );
       }
 
-      // Find next untested story using FOR UPDATE SKIP LOCKED
-      // A story is "untested" if it has no completed execution (not IN_PROGRESS)
+      // Find next available story using FOR UPDATE SKIP LOCKED
+      // A story is available if it has no IN_PROGRESS, PASS, or CANT_BE_TESTED execution
       const nextStory = await manager
         .createQueryBuilder(ReleaseStory, 'rs')
-        .setLock('pessimistic_write_or_fail')
+        .setLock('pessimistic_partial_write')
         .where('rs.releaseId = :releaseId', { releaseId })
         .andWhere(
           `rs.id NOT IN (
             SELECT te."releaseStoryId" FROM test_executions te
             WHERE te."releaseId" = :releaseId
-            AND te.status != :untested
+            AND te.status IN (:...excludedStatuses)
           )`,
-          { releaseId, untested: TestStatus.UNTESTED },
+          {
+            releaseId,
+            excludedStatuses: [
+              TestStatus.IN_PROGRESS,
+              TestStatus.PASS,
+              TestStatus.CANT_BE_TESTED,
+            ],
+          },
         )
         .orderBy(
           `CASE rs.priority

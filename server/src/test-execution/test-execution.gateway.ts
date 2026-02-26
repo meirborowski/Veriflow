@@ -7,15 +7,25 @@ import {
   ConnectedSocket,
   MessageBody,
 } from '@nestjs/websockets';
-import { Logger, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
+import {
+  Logger,
+  OnModuleInit,
+  OnModuleDestroy,
+  ForbiddenException,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 import { Server, Socket } from 'socket.io';
 import { TestExecutionService } from './test-execution.service';
+import { Release } from '../releases/entities/release.entity';
+import { ProjectMember } from '../projects/entities/project-member.entity';
 import type { JoinSessionDto } from './dto/join-session.dto';
 import type { RequestWorkDto } from './dto/request-work.dto';
 import type { UpdateStepDto } from './dto/update-step.dto';
 import type { SubmitResultDto } from './dto/submit-result.dto';
+
 interface SocketData {
   userId: string;
   email: string;
@@ -50,6 +60,10 @@ export class TestExecutionGateway
     private readonly executionService: TestExecutionService,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
+    @InjectRepository(Release)
+    private readonly releaseRepository: Repository<Release>,
+    @InjectRepository(ProjectMember)
+    private readonly memberRepository: Repository<ProjectMember>,
   ) {}
 
   onModuleInit(): void {
@@ -122,6 +136,27 @@ export class TestExecutionGateway
     @MessageBody() dto: JoinSessionDto,
   ): Promise<void> {
     const data = client.data as SocketData;
+
+    // Verify user is a member of the release's project
+    const release = await this.releaseRepository.findOne({
+      where: { id: dto.releaseId },
+      select: ['id', 'projectId'],
+    });
+
+    if (!release) {
+      client.emit('error', { message: 'Release not found' });
+      return;
+    }
+
+    const member = await this.memberRepository.findOne({
+      where: { userId: data.userId, projectId: release.projectId },
+    });
+
+    if (!member) {
+      client.emit('error', { message: 'Not a member of this project' });
+      return;
+    }
+
     const room = `release:${dto.releaseId}`;
 
     await client.join(room);
