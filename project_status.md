@@ -1,7 +1,7 @@
 # Veriflow — Project Status
 
 ## Current Phase
-**Phase 3 — Test Runner**
+**Phase 4 — Defect Tracking** (Complete)
 
 ## Phase Progress
 
@@ -101,15 +101,28 @@
 
 ### Phase 4 — Defect Tracking
 
-#### Bug Management (end-to-end)
+#### Bug Management — Server
 | Task | Status | Notes |
 |---|---|---|
-| Bug entity + CRUD | Not Started | |
-| Auto-create bug on Fail verdict | Not Started | |
-| Bug lifecycle (Open → Resolved → Closed) | Not Started | |
-| Client: bug list per project | Not Started | |
-| Client: bug detail page | Not Started | |
-| Client: bug creation from test runner | Not Started | |
+| Bug entity | Done | UUID PK, FK to Project, UserStory, TestExecution, User (reporter/assignee) |
+| RolesGuard + decorator extension | Done | @ResolveProjectFrom('bug'), bug ID → projectId resolution |
+| Bug CRUD service | Done | create, createFromExecution, findAllByProject, findOne, update, remove |
+| Bug controller + DTOs | Done | POST/GET/PATCH/DELETE, create-bug, update-bug, bug-query DTOs |
+| Auto-create bug on FAIL verdict | Done | TestExecutionService.submitResult → BugsService.createFromExecution |
+| Bug entity in dependent modules | Done | Registered in Projects, UserStories, Releases, TestExecution modules |
+| Unit tests | Done | 25 new tests (bugs service + controller + guard + auto-creation) |
+
+#### Bug Management — Client
+| Task | Status | Notes |
+|---|---|---|
+| Bug types | Done | BugListItem, BugDetail, BugStatus, payloads, PaginatedBugs |
+| TanStack Query hooks | Done | useBugs, useBug, useCreateBug, useUpdateBug, useDeleteBug |
+| BugSeverityBadge | Done | Critical=rose, Major=orange, Minor=amber, Trivial=slate |
+| BugStatusBadge | Done | Open=red, In Progress=blue, Resolved=green, Closed=slate, Reopened=amber |
+| Bug list page | Done | Table, severity/status filters, pagination, empty state, skeleton loading |
+| Bug detail page | Done | Status/severity/assignee dropdowns, metadata, description, delete |
+| Sidebar navigation | Done | "Bugs" nav item with Bug icon |
+| Test runner integration | Done | Invalidate bug queries after result submission |
 
 ### Phase 5 — Polish
 | Task | Status | Notes |

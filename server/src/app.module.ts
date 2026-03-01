@@ -7,6 +7,7 @@ import { ProjectsModule } from './projects/projects.module';
 import { UserStoriesModule } from './user-stories/user-stories.module';
 import { ReleasesModule } from './releases/releases.module';
 import { TestExecutionModule } from './test-execution/test-execution.module';
+import { BugsModule } from './bugs/bugs.module';
 
 @Module({
   imports: [
@@ -25,6 +26,7 @@ import { TestExecutionModule } from './test-execution/test-execution.module';
     UserStoriesModule,
     ReleasesModule,
     TestExecutionModule,
+    BugsModule,
   ],
   controllers: [AppController],
 })

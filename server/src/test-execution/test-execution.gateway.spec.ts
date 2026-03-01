@@ -62,8 +62,14 @@ describe('TestExecutionGateway', () => {
         { provide: TestExecutionService, useValue: mockExecutionService },
         { provide: JwtService, useValue: mockJwtService },
         { provide: ConfigService, useValue: mockConfigService },
-        { provide: getRepositoryToken(Release), useValue: mockReleaseRepository },
-        { provide: getRepositoryToken(ProjectMember), useValue: mockMemberRepository },
+        {
+          provide: getRepositoryToken(Release),
+          useValue: mockReleaseRepository,
+        },
+        {
+          provide: getRepositoryToken(ProjectMember),
+          useValue: mockMemberRepository,
+        },
       ],
     }).compile();
 
