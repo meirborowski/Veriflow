@@ -385,14 +385,17 @@ describe('WebSocket (e2e)', () => {
       // Disconnect
       client.disconnect();
 
-      // Wait for server-side cleanup
-      await new Promise((r) => setTimeout(r, 500));
+      // Poll DB until server-side cleanup completes (max 5s)
+      let remaining = 1;
+      for (let i = 0; i < 50 && remaining > 0; i++) {
+        await new Promise((r) => setTimeout(r, 100));
+        const after = await ds.getRepository(TestExecution).find({
+          where: { releaseId: closed.id, status: TestStatus.IN_PROGRESS },
+        });
+        remaining = after.length;
+      }
 
-      // IN_PROGRESS execution should be deleted
-      const after = await ds.getRepository(TestExecution).find({
-        where: { releaseId: closed.id, status: TestStatus.IN_PROGRESS },
-      });
-      expect(after).toHaveLength(0);
+      expect(remaining).toBe(0);
     });
   });
 });

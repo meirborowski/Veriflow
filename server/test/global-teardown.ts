@@ -1,15 +1,12 @@
 import { Client } from 'pg';
+import { resolveBaseUrl } from './test-db-url';
 
 export default async function globalTeardown(): Promise<void> {
   if (process.env.DROP_TEST_DB !== 'true') {
     return;
   }
 
-  const baseUrl =
-    process.env.DATABASE_URL ??
-    'postgresql://veriflow:veriflow_dev@localhost:5432/veriflow';
-
-  const url = new URL(baseUrl);
+  const url = resolveBaseUrl();
   url.pathname = '/postgres';
 
   const client = new Client({ connectionString: url.toString() });
