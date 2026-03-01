@@ -10,24 +10,11 @@ import { ReleaseStoryStep } from '../../src/releases/entities/release-story-step
 import { TestExecution } from '../../src/test-execution/entities/test-execution.entity';
 import { StepResult } from '../../src/test-execution/entities/step-result.entity';
 import { Bug } from '../../src/bugs/entities/bug.entity';
+import { getTestDatabaseUrl } from '../test-db-url';
+
+export { getTestDatabaseUrl };
 
 let dataSource: DataSource | null = null;
-
-export function getTestDatabaseUrl(): string {
-  const baseUrl =
-    process.env.DATABASE_URL ??
-    'postgresql://testsync:testsync_dev@localhost:5432/testsync';
-
-  const url = new URL(baseUrl);
-  // Docker Compose uses 'db' as hostname; tests run on the host
-  if (url.hostname === 'db') {
-    url.hostname = 'localhost';
-  }
-  if (!url.pathname.includes('veriflow_test')) {
-    url.pathname = '/veriflow_test';
-  }
-  return url.toString();
-}
 
 export async function initTestDataSource(): Promise<DataSource> {
   if (dataSource && dataSource.isInitialized) {

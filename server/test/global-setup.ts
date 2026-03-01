@@ -1,23 +1,5 @@
 import { Client } from 'pg';
-
-function resolveBaseUrl(): URL {
-  const baseUrl =
-    process.env.DATABASE_URL ??
-    'postgresql://testsync:testsync_dev@localhost:5432/testsync';
-
-  const url = new URL(baseUrl);
-  // Docker Compose uses 'db' as hostname; tests run on the host
-  if (url.hostname === 'db') {
-    url.hostname = 'localhost';
-  }
-  return url;
-}
-
-function getTestDatabaseUrl(): string {
-  const url = resolveBaseUrl();
-  url.pathname = '/veriflow_test';
-  return url.toString();
-}
+import { resolveBaseUrl, getTestDatabaseUrl } from './test-db-url';
 
 export default async function globalSetup(): Promise<void> {
   const url = resolveBaseUrl();
