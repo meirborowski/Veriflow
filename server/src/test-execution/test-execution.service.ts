@@ -16,6 +16,7 @@ import { ReleaseStoryStep } from '../releases/entities/release-story-step.entity
 import { TestStatus, StepStatus, ReleaseStatus } from '../common/types/enums';
 import type { PaginatedResponse } from '../common/types/pagination';
 import type { ExecutionQueryDto } from './dto/execution-query.dto';
+import { BugsService } from '../bugs/bugs.service';
 import type { BugReportDto } from './dto/submit-result.dto';
 
 export interface AssignedStory {
@@ -79,6 +80,7 @@ export class TestExecutionService implements OnModuleInit {
     @InjectRepository(ReleaseStoryStep)
     private readonly releaseStoryStepRepository: Repository<ReleaseStoryStep>,
     private readonly dataSource: DataSource,
+    private readonly bugsService: BugsService,
   ) {}
 
   async onModuleInit(): Promise<void> {
@@ -269,8 +271,7 @@ export class TestExecutionService implements OnModuleInit {
     status: TestStatus,
     comment: string | null,
     userId: string,
-    // Bug creation deferred to Phase 4
-    bugPayload?: BugReportDto, // eslint-disable-line @typescript-eslint/no-unused-vars
+    bugPayload?: BugReportDto,
   ): Promise<TestExecution> {
     const execution = await this.executionRepository.findOne({
       where: { id: executionId },
@@ -311,7 +312,9 @@ export class TestExecutionService implements OnModuleInit {
       `Execution completed: id=${executionId}, status=${status}, user=${userId}`,
     );
 
-    // Bug creation deferred to Phase 4
+    if (status === TestStatus.FAIL && bugPayload) {
+      await this.bugsService.createFromExecution(saved, userId, bugPayload);
+    }
 
     return saved;
   }

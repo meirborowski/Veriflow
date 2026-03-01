@@ -12,6 +12,8 @@ import { ReleaseStory } from '../releases/entities/release-story.entity';
 import { ReleaseStoryStep } from '../releases/entities/release-story-step.entity';
 import { ProjectMember } from '../projects/entities/project-member.entity';
 import { UserStory } from '../user-stories/entities/user-story.entity';
+import { Bug } from '../bugs/entities/bug.entity';
+import { BugsModule } from '../bugs/bugs.module';
 
 @Module({
   imports: [
@@ -23,8 +25,10 @@ import { UserStory } from '../user-stories/entities/user-story.entity';
       ReleaseStoryStep,
       ProjectMember,
       UserStory,
+      Bug,
     ]),
     JwtModule.register({}),
+    BugsModule,
   ],
   controllers: [TestExecutionController],
   providers: [TestExecutionService, TestExecutionGateway, RolesGuard],
