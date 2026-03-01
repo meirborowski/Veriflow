@@ -87,7 +87,7 @@ export function useDeleteBug(projectId: string) {
     mutationFn: (id: string) => api.delete(`/bugs/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: bugKeys.list(projectId),
+        queryKey: bugKeys.lists(),
       });
       toast.success('Bug deleted');
     },

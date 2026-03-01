@@ -1,6 +1,5 @@
-import { IsUUID, IsEnum, IsOptional } from 'class-validator';
+import { IsUUID, IsEnum, IsOptional, IsInt, Max, Min } from 'class-validator';
 import { Type } from 'class-transformer';
-import { IsInt, Max, Min } from 'class-validator';
 import { BugSeverity, BugStatus } from '../../common/types/enums';
 
 export class BugQueryDto {

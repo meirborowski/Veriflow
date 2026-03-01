@@ -43,9 +43,7 @@ export class UserStoriesService {
   ) {}
 
   async create(projectId: string, dto: CreateStoryDto): Promise<UserStory> {
-    let storyId: string;
-
-    await this.dataSource.transaction(async (manager) => {
+    const storyId = await this.dataSource.transaction(async (manager) => {
       const storyRepo = manager.getRepository(UserStory);
       const stepRepo = manager.getRepository(VerificationStep);
 
@@ -72,10 +70,10 @@ export class UserStoriesService {
         `Story created: id=${savedStory.id}, project=${projectId}`,
       );
 
-      storyId = savedStory.id;
+      return savedStory.id;
     });
 
-    return this.findOne(storyId!);
+    return this.findOne(storyId);
   }
 
   async findAllByProject(
