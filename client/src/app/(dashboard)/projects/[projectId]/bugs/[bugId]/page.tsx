@@ -134,7 +134,7 @@ export default function BugDetailPage({
           </label>
           <Select
             value={bug.status}
-            onValueChange={(value) => updateBug.mutate({ status: value })}
+            onValueChange={(value) => updateBug.mutate({ status: value as BugStatus })}
             disabled={updateBug.isPending}
           >
             <SelectTrigger className="w-full">
@@ -158,7 +158,7 @@ export default function BugDetailPage({
           </label>
           <Select
             value={bug.severity}
-            onValueChange={(value) => updateBug.mutate({ severity: value })}
+            onValueChange={(value) => updateBug.mutate({ severity: value as BugSeverity })}
             disabled={updateBug.isPending}
           >
             <SelectTrigger className="w-full">

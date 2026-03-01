@@ -27,8 +27,8 @@ const severityConfig: Record<
   },
 };
 
-export function BugSeverityBadge({ severity }: { severity: string }) {
-  const config = severityConfig[severity as BugSeverity] ?? severityConfig[BugSeverity.TRIVIAL];
+export function BugSeverityBadge({ severity }: { severity: BugSeverity }) {
+  const config = severityConfig[severity] ?? severityConfig[BugSeverity.TRIVIAL];
   return (
     <Badge variant="outline" className={config.className}>
       <span

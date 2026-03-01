@@ -6,14 +6,22 @@ import { Bug } from './entities/bug.entity';
 import { UserStory } from '../user-stories/entities/user-story.entity';
 import { TestExecution } from '../test-execution/entities/test-execution.entity';
 import { ProjectMember } from '../projects/entities/project-member.entity';
+import { Release } from '../releases/entities/release.entity';
 import { ReleaseStory } from '../releases/entities/release-story.entity';
 import { BugSeverity, BugStatus } from '../common/types/enums';
 
 describe('BugsService', () => {
   let service: BugsService;
 
+  const mockExecutionQb = {
+    innerJoin: jest.fn().mockReturnThis(),
+    where: jest.fn().mockReturnThis(),
+    andWhere: jest.fn().mockReturnThis(),
+    getOne: jest.fn(),
+  };
+
   const mockExecutionRepo = {
-    findOne: jest.fn(),
+    createQueryBuilder: jest.fn().mockReturnValue(mockExecutionQb),
   };
 
   const mockReleaseRepo = {
@@ -29,7 +37,6 @@ describe('BugsService', () => {
     manager: {
       getRepository: jest.fn((entity: unknown) => {
         if (entity === TestExecution) return mockExecutionRepo;
-        if (entity === 'Release') return mockReleaseRepo;
         return {};
       }),
     },
@@ -61,6 +68,10 @@ describe('BugsService', () => {
           provide: getRepositoryToken(ReleaseStory),
           useValue: mockReleaseStoryRepo,
         },
+        {
+          provide: getRepositoryToken(Release),
+          useValue: mockReleaseRepo,
+        },
       ],
     }).compile();
 
@@ -69,9 +80,9 @@ describe('BugsService', () => {
 
     mockBugRepo.manager.getRepository.mockImplementation((entity: unknown) => {
       if (entity === TestExecution) return mockExecutionRepo;
-      if (entity === 'Release') return mockReleaseRepo;
       return {};
     });
+    mockExecutionRepo.createQueryBuilder.mockReturnValue(mockExecutionQb);
   });
 
   describe('create', () => {
@@ -134,12 +145,12 @@ describe('BugsService', () => {
       ).rejects.toThrow(NotFoundException);
     });
 
-    it('should throw NotFoundException if execution not found', async () => {
+    it('should throw NotFoundException if execution not found in project', async () => {
       mockStoryRepo.findOne.mockResolvedValue({
         id: 'story-1',
         projectId: 'project-1',
       });
-      mockExecutionRepo.findOne.mockResolvedValue(null);
+      mockExecutionQb.getOne.mockResolvedValue(null);
 
       await expect(
         service.create('project-1', 'user-1', {
