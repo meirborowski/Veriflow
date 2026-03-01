@@ -40,6 +40,7 @@ export async function createTestApp(options?: {
   app.setGlobalPrefix('api/v1', { exclude: ['health'] });
   app.useGlobalPipes(new ValidationPipe());
   app.useGlobalFilters(new HttpExceptionFilter());
+  app.enableShutdownHooks();
 
   await app.init();
   return app;

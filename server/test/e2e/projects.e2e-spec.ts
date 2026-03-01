@@ -276,7 +276,8 @@ describe('Projects (e2e)', () => {
       await request(app.getHttpServer())
         .post(`/api/v1/projects/${projectId}/members`)
         .set('Authorization', admin.authHeader)
-        .send({ email: member.email, role: 'DEVELOPER' });
+        .send({ email: member.email, role: 'DEVELOPER' })
+        .expect(201);
     });
 
     it('should update member role', async () => {
@@ -315,7 +316,8 @@ describe('Projects (e2e)', () => {
       await request(app.getHttpServer())
         .post(`/api/v1/projects/${project.id}/members`)
         .set('Authorization', admin.authHeader)
-        .send({ email: member.email, role: 'TESTER' });
+        .send({ email: member.email, role: 'TESTER' })
+        .expect(201);
 
       await request(app.getHttpServer())
         .delete(`/api/v1/projects/${project.id}/members/${member.id}`)

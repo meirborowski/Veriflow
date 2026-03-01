@@ -37,6 +37,7 @@ describe('Releases Integration', () => {
   describe('Snapshot immutability', () => {
     it('should not change snapshot when source story is modified after close', async () => {
       const ds = getDataSource();
+      await truncateAll(ds);
       const user = await seedUser(ds);
       const project = await seedProject(ds, user.id);
       const story = await seedStoryWithSteps(ds, project.id, {
