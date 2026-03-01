@@ -10,6 +10,8 @@ import { Repository } from 'typeorm';
 import { ProjectMember } from '../../projects/entities/project-member.entity';
 import { UserStory } from '../../user-stories/entities/user-story.entity';
 import { Release } from '../../releases/entities/release.entity';
+import { TestExecution } from '../../test-execution/entities/test-execution.entity';
+import { Bug } from '../../bugs/entities/bug.entity';
 import { ROLES_KEY } from '../decorators/roles.decorator';
 import { RESOLVE_PROJECT_KEY } from '../decorators/resolve-project.decorator';
 
@@ -19,6 +21,8 @@ describe('RolesGuard', () => {
   let memberRepository: jest.Mocked<Repository<ProjectMember>>;
   let storyRepository: jest.Mocked<Repository<UserStory>>;
   let releaseRepository: jest.Mocked<Repository<Release>>;
+  let executionRepository: jest.Mocked<Repository<TestExecution>>;
+  let bugRepository: jest.Mocked<Repository<Bug>>;
 
   beforeEach(() => {
     reflector = new Reflector();
@@ -31,12 +35,20 @@ describe('RolesGuard', () => {
     releaseRepository = {
       findOne: jest.fn(),
     } as unknown as jest.Mocked<Repository<Release>>;
+    executionRepository = {
+      findOne: jest.fn(),
+    } as unknown as jest.Mocked<Repository<TestExecution>>;
+    bugRepository = {
+      findOne: jest.fn(),
+    } as unknown as jest.Mocked<Repository<Bug>>;
 
     guard = new RolesGuard(
       reflector,
       memberRepository,
       storyRepository,
       releaseRepository,
+      executionRepository,
+      bugRepository,
     );
   });
 
@@ -334,6 +346,83 @@ describe('RolesGuard', () => {
       .mockImplementation((key: string) => {
         if (key === ROLES_KEY) return [UserRole.ADMIN];
         if (key === RESOLVE_PROJECT_KEY) return 'release';
+        return undefined;
+      });
+
+    const context = createMockContext(
+      { userId: 'user-1', email: 'test@test.com' },
+      {},
+    );
+
+    await expect(guard.canActivate(context)).rejects.toThrow(
+      ForbiddenException,
+    );
+  });
+
+  // Bug resolution tests
+
+  it('should resolve projectId from bug when @ResolveProjectFrom("bug") is set', async () => {
+    jest
+      .spyOn(reflector, 'getAllAndOverride')
+      .mockImplementation((key: string) => {
+        if (key === ROLES_KEY) return [UserRole.ADMIN];
+        if (key === RESOLVE_PROJECT_KEY) return 'bug';
+        return undefined;
+      });
+
+    bugRepository.findOne.mockResolvedValue({
+      id: 'bug-1',
+      projectId: 'project-1',
+    } as Bug);
+
+    memberRepository.findOne.mockResolvedValue({
+      userId: 'user-1',
+      projectId: 'project-1',
+      role: UserRole.ADMIN,
+    } as ProjectMember);
+
+    const context = createMockContext(
+      { userId: 'user-1', email: 'test@test.com' },
+      { id: 'bug-1' },
+    );
+
+    expect(await guard.canActivate(context)).toBe(true);
+    // eslint-disable-next-line @typescript-eslint/unbound-method
+    expect(bugRepository.findOne).toHaveBeenCalledWith({
+      where: { id: 'bug-1' },
+      select: ['id', 'projectId'],
+    });
+    // eslint-disable-next-line @typescript-eslint/unbound-method
+    expect(memberRepository.findOne).toHaveBeenCalledWith({
+      where: { userId: 'user-1', projectId: 'project-1' },
+    });
+  });
+
+  it('should throw NotFoundException when bug is not found during resolution', async () => {
+    jest
+      .spyOn(reflector, 'getAllAndOverride')
+      .mockImplementation((key: string) => {
+        if (key === ROLES_KEY) return [UserRole.ADMIN];
+        if (key === RESOLVE_PROJECT_KEY) return 'bug';
+        return undefined;
+      });
+
+    bugRepository.findOne.mockResolvedValue(null);
+
+    const context = createMockContext(
+      { userId: 'user-1', email: 'test@test.com' },
+      { id: 'nonexistent-bug' },
+    );
+
+    await expect(guard.canActivate(context)).rejects.toThrow(NotFoundException);
+  });
+
+  it('should throw ForbiddenException when bug ID param is missing for bug resolution', async () => {
+    jest
+      .spyOn(reflector, 'getAllAndOverride')
+      .mockImplementation((key: string) => {
+        if (key === ROLES_KEY) return [UserRole.ADMIN];
+        if (key === RESOLVE_PROJECT_KEY) return 'bug';
         return undefined;
       });
 

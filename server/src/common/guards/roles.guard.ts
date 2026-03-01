@@ -16,6 +16,7 @@ import { ProjectMember } from '../../projects/entities/project-member.entity';
 import { UserStory } from '../../user-stories/entities/user-story.entity';
 import { Release } from '../../releases/entities/release.entity';
 import { TestExecution } from '../../test-execution/entities/test-execution.entity';
+import { Bug } from '../../bugs/entities/bug.entity';
 import type { JwtPayload } from '../decorators/current-user.decorator';
 
 @Injectable()
@@ -30,6 +31,8 @@ export class RolesGuard implements CanActivate {
     private readonly releaseRepository: Repository<Release>,
     @InjectRepository(TestExecution)
     private readonly executionRepository: Repository<TestExecution>,
+    @InjectRepository(Bug)
+    private readonly bugRepository: Repository<Bug>,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -113,6 +116,22 @@ export class RolesGuard implements CanActivate {
       }
 
       projectId = release.projectId;
+    } else if (resolveFrom === 'bug') {
+      const bugId = request.params.id as string | undefined;
+      if (!bugId) {
+        throw new ForbiddenException('Bug ID is required');
+      }
+
+      const bug = await this.bugRepository.findOne({
+        where: { id: bugId },
+        select: ['id', 'projectId'],
+      });
+
+      if (!bug) {
+        throw new NotFoundException('Bug not found');
+      }
+
+      projectId = bug.projectId;
     } else {
       projectId = (request.params.projectId ?? request.params.id) as
         | string
