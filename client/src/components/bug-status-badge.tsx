@@ -32,8 +32,8 @@ const statusConfig: Record<
   },
 };
 
-export function BugStatusBadge({ status }: { status: string }) {
-  const config = statusConfig[status as BugStatus] ?? statusConfig[BugStatus.OPEN];
+export function BugStatusBadge({ status }: { status: BugStatus }) {
+  const config = statusConfig[status] ?? statusConfig[BugStatus.OPEN];
   return (
     <Badge variant="outline" className={config.className}>
       <span

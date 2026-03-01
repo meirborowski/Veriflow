@@ -1,4 +1,5 @@
 import type { PaginationMeta } from './projects';
+import { BugSeverity } from './test-execution';
 
 export { BugSeverity } from './test-execution';
 
@@ -13,8 +14,8 @@ export enum BugStatus {
 export interface BugListItem {
   id: string;
   title: string;
-  severity: string;
-  status: string;
+  severity: BugSeverity;
+  status: BugStatus;
   storyTitle: string;
   reportedByName: string;
   assignedToName: string | null;
@@ -28,8 +29,8 @@ export interface BugDetail {
   executionId: string | null;
   title: string;
   description: string;
-  severity: string;
-  status: string;
+  severity: BugSeverity;
+  status: BugStatus;
   reportedById: string;
   assignedToId: string | null;
   createdAt: string;
@@ -60,13 +61,13 @@ export interface CreateBugPayload {
   executionId?: string;
   title: string;
   description: string;
-  severity: string;
+  severity: BugSeverity;
 }
 
 export interface UpdateBugPayload {
-  status?: string;
+  status?: BugStatus;
   assignedToId?: string | null;
-  severity?: string;
+  severity?: BugSeverity;
   title?: string;
   description?: string;
 }
@@ -74,8 +75,8 @@ export interface UpdateBugPayload {
 export interface BugQueryParams {
   page?: number;
   limit?: number;
-  status?: string;
-  severity?: string;
+  status?: BugStatus;
+  severity?: BugSeverity;
   storyId?: string;
 }
 

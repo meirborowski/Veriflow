@@ -11,6 +11,7 @@ import { UserStory } from '../user-stories/entities/user-story.entity';
 import { TestExecution } from '../test-execution/entities/test-execution.entity';
 import { ProjectMember } from '../projects/entities/project-member.entity';
 import { ReleaseStory } from '../releases/entities/release-story.entity';
+import { Release } from '../releases/entities/release.entity';
 import { CreateBugDto } from './dto/create-bug.dto';
 import { UpdateBugDto } from './dto/update-bug.dto';
 import { BugQueryDto } from './dto/bug-query.dto';
@@ -42,6 +43,8 @@ export class BugsService {
     private readonly memberRepository: Repository<ProjectMember>,
     @InjectRepository(ReleaseStory)
     private readonly releaseStoryRepository: Repository<ReleaseStory>,
+    @InjectRepository(Release)
+    private readonly releaseRepository: Repository<Release>,
   ) {}
 
   async create(
@@ -58,13 +61,18 @@ export class BugsService {
     }
 
     if (dto.executionId) {
-      // Validate execution exists - just an extra safety check
+      // Validate execution exists within the same project
       const execution = await this.bugRepository.manager
         .getRepository(TestExecution)
-        .findOne({ where: { id: dto.executionId } });
+        .createQueryBuilder('execution')
+        .innerJoin('execution.releaseStory', 'releaseStory')
+        .innerJoin('releaseStory.release', 'release')
+        .where('execution.id = :executionId', { executionId: dto.executionId })
+        .andWhere('release.projectId = :projectId', { projectId })
+        .getOne();
 
       if (!execution) {
-        throw new NotFoundException('Execution not found');
+        throw new NotFoundException('Execution not found in this project');
       }
     }
 
@@ -104,18 +112,16 @@ export class BugsService {
     }
 
     // Get the projectId from the release
-    const release = await this.bugRepository.manager
-      .getRepository('Release')
-      .findOne({
-        where: { id: releaseStory.releaseId },
-        select: ['id', 'projectId'],
-      });
+    const release = await this.releaseRepository.findOne({
+      where: { id: releaseStory.releaseId },
+      select: ['id', 'projectId'],
+    });
 
     if (!release) {
       throw new NotFoundException('Release not found');
     }
 
-    const projectId = (release as { id: string; projectId: string }).projectId;
+    const projectId = release.projectId;
     const storyId = releaseStory.sourceStoryId;
 
     if (!storyId) {
