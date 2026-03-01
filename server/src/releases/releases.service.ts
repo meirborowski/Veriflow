@@ -215,7 +215,6 @@ export class ReleasesService {
       // Lock the release row to prevent concurrent close attempts
       const release = await releaseRepo.findOne({
         where: { id: releaseId },
-        relations: ['scopedStories', 'scopedStories.steps'],
         lock: { mode: 'pessimistic_write' },
       });
 
@@ -223,15 +222,23 @@ export class ReleasesService {
         throw new NotFoundException('Release not found');
       }
 
+      // Load relations separately — FOR UPDATE cannot be used with LEFT JOINs
+      const releaseWithStories = await releaseRepo.findOne({
+        where: { id: releaseId },
+        relations: ['scopedStories', 'scopedStories.steps'],
+      });
+
       if (release.status !== ReleaseStatus.DRAFT) {
         throw new ConflictException('Release is already closed');
       }
 
-      if (release.scopedStories.length === 0) {
+      const scopedStories = releaseWithStories!.scopedStories;
+
+      if (scopedStories.length === 0) {
         throw new BadRequestException('Cannot close release with no stories');
       }
 
-      for (const story of release.scopedStories) {
+      for (const story of scopedStories) {
         const snapshot = releaseStoryRepo.create({
           releaseId,
           sourceStoryId: story.id,
@@ -264,7 +271,7 @@ export class ReleasesService {
         id: release.id,
         name: release.name,
         projectId: release.projectId,
-        storyCount: release.scopedStories.length,
+        storyCount: scopedStories.length,
       };
     });
 
