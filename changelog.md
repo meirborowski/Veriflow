@@ -1,6 +1,21 @@
 # Changelog
 
 ## 2026-03-01
+- test: add E2E test infrastructure (global-setup/teardown, db/app/auth/seed helpers, jest-e2e/integration configs)
+- test: add auth E2E tests (16 tests — register, login, refresh, me, throttle)
+- test: add projects E2E tests (22 tests — CRUD, members, roles, access control)
+- test: add user-stories E2E tests (14 tests — CRUD with steps, filters, role enforcement)
+- test: add releases E2E tests (20 tests — CRUD, scoped stories, close/snapshot, immutability)
+- test: add test-execution E2E tests (6 tests — list, latest, detail with step results)
+- test: add bugs E2E tests (13 tests — CRUD, filters, role enforcement, cross-project validation)
+- test: add WebSocket E2E tests (9 tests — auth, join-session, request-work, submit-result, disconnect cleanup)
+- test: add releases integration tests (4 tests — snapshot immutability/completeness, concurrent double-close, empty close)
+- test: add test-execution integration tests (5 tests — priority ordering, no double-booking, pool exclusions, cleanup, attempt counting)
+- test: add projects integration tests (2 tests — cascade delete, last admin protection)
+- test: add bugs integration tests (3 tests — createFromExecution chain, deleted source story, assign non-member)
+- chore: add test:integration npm script, update test:e2e with --forceExit
+- chore: install socket.io-client as devDependency for WebSocket E2E tests
+- docs: update CLAUDE.md Testing section and Commands table with E2E/integration test docs
 - feat: add Bug entity with relations to Project, UserStory, TestExecution, User (reporter/assignee)
 - feat: add BugSeverity/BugStatus enums (already defined in Phase 3) used by Bug entity
 - feat: extend RolesGuard with 'bug' resolution branch for bug-scoped role checking

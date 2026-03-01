@@ -227,15 +227,20 @@ test: add e2e tests for release close endpoint
 | `cd server && npm run start:dev` | Start dev server (port 3001) |
 | `cd server && npm run build` | Production build |
 | `cd server && npm run test` | Run unit tests |
-| `cd server && npm run test:e2e` | Run E2E tests |
+| `cd server && npm run test:e2e` | Run E2E tests (requires PostgreSQL) |
+| `cd server && npm run test:integration` | Run integration tests (requires PostgreSQL) |
 | `cd server && npm run format` | Format code (Prettier) |
 | `cd server && npm run lint` | Run linter |
 
 ## Testing
-- **Unit tests**: Jest — colocated with source files (`*.spec.ts`)
-- **E2E tests**: `server/test/` directory
-- **Run before PR**: `npm run test` and `npm run lint` in both client and server
-- **Coverage target**: Focus on services and business logic, not boilerplate
+- **Unit tests**: Jest — colocated with source files (`*.spec.ts`). Repositories are mocked.
+- **E2E tests**: Full HTTP stack tests against a real `veriflow_test` database. Live in `server/test/e2e/`. Run with `cd server && npm run test:e2e`.
+- **Integration tests**: Service-level tests with real DB for transactions, locks, cascades. Live in `server/test/integration/`. Run with `cd server && npm run test:integration`.
+- **Always add E2E tests** when adding or changing REST endpoints.
+- **Always add integration tests** for transactions, locks, cascade deletes, and complex queries.
+- **Use shared helpers** from `server/test/helpers/`. Never mock the DB in E2E/integration tests.
+- **Run before PR**: `npm run test`, `npm run test:e2e`, and `npm run test:integration` in server; `npm run lint` in both client and server.
+- **Coverage target**: Focus on services and business logic, not boilerplate.
 
 ## Documentation
 - [README.md](README.md) — Project overview and philosophy
