@@ -12,11 +12,13 @@ import { StepResult } from './entities/step-result.entity';
 import { Release } from '../releases/entities/release.entity';
 import { ReleaseStory } from '../releases/entities/release-story.entity';
 import { ReleaseStoryStep } from '../releases/entities/release-story-step.entity';
+import { BugsService } from '../bugs/bugs.service';
 import {
   TestStatus,
   StepStatus,
   ReleaseStatus,
   Priority,
+  BugSeverity,
 } from '../common/types/enums';
 
 describe('TestExecutionService', () => {
@@ -78,6 +80,10 @@ describe('TestExecutionService', () => {
     createQueryBuilder: jest.fn(),
   };
 
+  const mockBugsService = {
+    createFromExecution: jest.fn(),
+  };
+
   const mockDataSource = {
     transaction: jest.fn(
       (cb: (manager: typeof mockManager) => Promise<unknown>) =>
@@ -107,6 +113,7 @@ describe('TestExecutionService', () => {
           useValue: mockReleaseStoryStepRepo,
         },
         { provide: DataSource, useValue: mockDataSource },
+        { provide: BugsService, useValue: mockBugsService },
       ],
     }).compile();
 
@@ -511,6 +518,88 @@ describe('TestExecutionService', () => {
       await expect(
         service.submitResult('exec-1', TestStatus.IN_PROGRESS, null, 'user-1'),
       ).rejects.toThrow(ConflictException);
+    });
+
+    it('should auto-create bug on FAIL with bugPayload', async () => {
+      const execution = {
+        id: 'exec-1',
+        assignedToUserId: 'user-1',
+        status: TestStatus.IN_PROGRESS,
+        comment: null,
+        completedAt: null,
+      };
+      const savedExecution = {
+        ...execution,
+        status: TestStatus.FAIL,
+        completedAt: new Date(),
+      };
+      mockExecutionRepo.findOne.mockResolvedValue(execution);
+      mockExecutionRepo.save.mockResolvedValue(savedExecution);
+      mockBugsService.createFromExecution.mockResolvedValue({ id: 'bug-1' });
+
+      const bugPayload = {
+        title: 'Login broken',
+        description: 'Button does not respond',
+        severity: BugSeverity.CRITICAL,
+      };
+
+      await service.submitResult(
+        'exec-1',
+        TestStatus.FAIL,
+        'Failed',
+        'user-1',
+        bugPayload,
+      );
+
+      expect(mockBugsService.createFromExecution).toHaveBeenCalledWith(
+        savedExecution,
+        'user-1',
+        bugPayload,
+      );
+    });
+
+    it('should not create bug on PASS even with bugPayload', async () => {
+      const execution = {
+        id: 'exec-1',
+        assignedToUserId: 'user-1',
+        status: TestStatus.IN_PROGRESS,
+        comment: null,
+        completedAt: null,
+      };
+      mockExecutionRepo.findOne.mockResolvedValue(execution);
+      mockExecutionRepo.save.mockResolvedValue({
+        ...execution,
+        status: TestStatus.PASS,
+        completedAt: new Date(),
+      });
+
+      await service.submitResult('exec-1', TestStatus.PASS, null, 'user-1', {
+        title: 'Bug',
+        description: 'desc',
+        severity: BugSeverity.MINOR,
+      });
+
+      expect(mockBugsService.createFromExecution).not.toHaveBeenCalled();
+    });
+
+    it('should not create bug on FAIL without bugPayload', async () => {
+      const execution = {
+        id: 'exec-1',
+        assignedToUserId: 'user-1',
+        status: TestStatus.IN_PROGRESS,
+        comment: null,
+        completedAt: null,
+      };
+      mockExecutionRepo.findOne.mockResolvedValue(execution);
+      mockExecutionRepo.save.mockResolvedValue({
+        ...execution,
+        status: TestStatus.FAIL,
+        completedAt: new Date(),
+      });
+
+      await service.submitResult('exec-1', TestStatus.FAIL, 'Failed', 'user-1');
+
+      expect(mockBugsService.createFromExecution).not.toHaveBeenCalled();
     });
   });
 

@@ -9,6 +9,7 @@ import { ReleaseStoryStep } from './entities/release-story-step.entity';
 import { ProjectMember } from '../projects/entities/project-member.entity';
 import { UserStory } from '../user-stories/entities/user-story.entity';
 import { TestExecution } from '../test-execution/entities/test-execution.entity';
+import { Bug } from '../bugs/entities/bug.entity';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { TestExecution } from '../test-execution/entities/test-execution.entity'
       ProjectMember,
       UserStory,
       TestExecution,
+      Bug,
     ]),
   ],
   controllers: [ReleasesController],

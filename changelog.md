@@ -1,5 +1,28 @@
 # Changelog
 
+## 2026-03-01
+- feat: add Bug entity with relations to Project, UserStory, TestExecution, User (reporter/assignee)
+- feat: add BugSeverity/BugStatus enums (already defined in Phase 3) used by Bug entity
+- feat: extend RolesGuard with 'bug' resolution branch for bug-scoped role checking
+- feat: extend ResolveProjectFrom decorator to accept 'bug' source type
+- feat: add BugsModule with CRUD service, controller, and DTOs (create, update, query)
+- feat: add BugsService with create, createFromExecution, findAllByProject, findOne, update, remove
+- feat: add BugsController with POST/GET/PATCH/DELETE endpoints under /projects/:projectId/bugs and /bugs/:id
+- feat: add auto-create bug on FAIL verdict in TestExecutionService.submitResult()
+- feat: register Bug entity in ProjectsModule, UserStoriesModule, ReleasesModule, TestExecutionModule for RolesGuard DI
+- feat: add client Bug types (BugListItem, BugDetail, BugStatus enum, payloads)
+- feat: add TanStack Query hooks for bugs (useBugs, useBug, useCreateBug, useUpdateBug, useDeleteBug)
+- feat: add BugSeverityBadge component (Critical=rose, Major=orange, Minor=amber, Trivial=slate)
+- feat: add BugStatusBadge component (Open=red, In Progress=blue, Resolved=green, Closed=slate, Reopened=amber)
+- feat: add Bugs nav item to project sidebar with Bug icon
+- feat: add bug list page with severity/status filters, pagination, table with actions, empty state
+- feat: add bug detail page with status/severity/assignee dropdowns, metadata, description, delete action
+- feat: invalidate bug queries in test runner after result submission
+- test: add 14 unit tests for BugsService (create, createFromExecution, list, detail, update, remove)
+- test: add 5 unit tests for BugsController (create, findAll, findOne, update, remove)
+- test: add 3 unit tests for RolesGuard bug resolution (resolve, not found, missing ID)
+- test: add 3 unit tests for auto-bug-creation in TestExecutionService (FAIL+bug, PASS+bug, FAIL-no-bug)
+
 ## 2026-02-26
 - feat: add TestExecution and StepResult entities with TypeORM relations (test_executions, step_results tables)
 - feat: add WebSocket gateway (/test-runner namespace) with JWT auth, heartbeat, disconnect cleanup

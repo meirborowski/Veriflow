@@ -11,6 +11,7 @@ import {
   Settings,
   ChevronLeft,
   LogOut,
+  Bug,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useProject } from '@/hooks/use-projects';
@@ -29,6 +30,7 @@ function ProjectNav({ projectId, pathname }: { projectId: string; pathname: stri
     { href: `/projects/${projectId}`, label: 'Overview', icon: FolderOpen, exact: true },
     { href: `/projects/${projectId}/stories`, label: 'Stories', icon: FileText },
     { href: `/projects/${projectId}/releases`, label: 'Releases', icon: Package },
+    { href: `/projects/${projectId}/bugs`, label: 'Bugs', icon: Bug },
     { href: `/projects/${projectId}/settings`, label: 'Settings', icon: Settings },
   ];
 

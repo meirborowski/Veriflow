@@ -1,8 +1,10 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { useSocket } from '@/context/socket-context';
+import { bugKeys } from '@/hooks/use-bugs';
 import type {
   AssignedStory,
   DashboardSummary,
@@ -29,6 +31,7 @@ interface TestRunnerState {
 
 export function useTestRunner(releaseId: string) {
   const socket = useSocket();
+  const queryClient = useQueryClient();
 
   const [runnerState, setRunnerState] = useState<TestRunnerState>({
     state: 'idle',
@@ -106,6 +109,7 @@ export function useTestRunner(releaseId: string) {
           currentStory: null,
           stepStatuses: new Map(),
         }));
+        queryClient.invalidateQueries({ queryKey: bugKeys.lists() });
       }),
 
       socket.onError((data) => {
@@ -116,7 +120,7 @@ export function useTestRunner(releaseId: string) {
     return () => {
       unsubs.forEach((unsub) => unsub());
     };
-  }, [socket]);
+  }, [socket, queryClient]);
 
   const requestWork = useCallback(() => {
     socket.requestWork(releaseId);
