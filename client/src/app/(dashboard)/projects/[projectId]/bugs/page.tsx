@@ -224,14 +224,14 @@ export default function BugsPage({
   const { projectId } = use(params);
   const { data: project } = useProject(projectId);
   const [page, setPage] = useState(1);
-  const [status, setStatus] = useState<string>('');
-  const [severity, setSeverity] = useState<string>('');
+  const [status, setStatus] = useState('');
+  const [severity, setSeverity] = useState('');
 
   const { data, isLoading, isError, refetch } = useBugs(projectId, {
     page,
     limit: PAGE_SIZE,
-    status: status || undefined,
-    severity: severity || undefined,
+    status: (status || undefined) as BugStatus | undefined,
+    severity: (severity || undefined) as BugSeverity | undefined,
   });
 
   return (
