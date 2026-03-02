@@ -129,6 +129,83 @@ Project
 - `Bug` → `UserStory` (the master story that failed)
 - `Bug` → `TestExecution` (the specific attempt that found it)
 - `StepResult` → `ReleaseStoryStep` (per-step verdict)
+- `StoryTestLink` → `UserStory` + `PlaywrightTest` (N:N mapping)
+- `AutomationRun` → `PlaywrightTest` (which test was executed)
+- `AutomationRun` → `UserStory` (which story it covers, via link)
+- `AutomationRun` → `Release` (optional — if targeting a specific release)
+
+### Playwright Automation Entities
+
+```
+PlaywrightTest
+  ├── id, projectId, externalId, testFile, testName
+  ├── tags[], lastSyncedAt, createdAt, updatedAt
+  │
+  ├── StoryTestLink (join — N:N)
+  │     ├── id, storyId, testId, linkedBy (USER | AUTO_DISCOVERY)
+  │     ├── createdAt
+  │
+  └── AutomationRun (one row per test execution)
+        ├── id, projectId, testId, releaseId (nullable)
+        ├── status (PASS | FAIL | ERROR | SKIPPED)
+        ├── triggeredBy (UI | CI_CD | REGISTRY_SYNC)
+        ├── duration (ms), startedAt, completedAt
+        ├── errorMessage (nullable), logs (nullable)
+        ├── externalRunId (nullable — CI job ID)
+        ├── createdAt
+```
+
+#### PlaywrightTest
+Represents a single Playwright test case registered from an external project.
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| id | UUID (PK) | Auto | Internal ID |
+| projectId | UUID (FK) | Yes | Parent project |
+| externalId | varchar | Yes | Stable identifier from the external project (unique per project) |
+| testFile | varchar | Yes | File path (e.g., `tests/auth/login.spec.ts`) |
+| testName | varchar | Yes | Test name (e.g., `should login with valid credentials`) |
+| tags | text[] | No | Optional tags for categorization |
+| lastSyncedAt | timestamptz | Yes | Last time this test was reported by the registry |
+| createdAt | timestamptz | Auto | |
+| updatedAt | timestamptz | Auto | |
+
+**Unique constraint**: `(projectId, externalId)`
+
+#### StoryTestLink
+N:N join between User Stories and Playwright tests.
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| id | UUID (PK) | Auto | |
+| storyId | UUID (FK) | Yes | References `user_stories`, CASCADE delete |
+| testId | UUID (FK) | Yes | References `playwright_tests`, CASCADE delete |
+| linkedBy | enum | Yes | `USER` (manual) or `AUTO_DISCOVERY` (from annotations) |
+| createdAt | timestamptz | Auto | |
+
+**Unique constraint**: `(storyId, testId)`
+
+#### AutomationRun
+One row per Playwright test execution. Append-only like TestExecution.
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| id | UUID (PK) | Auto | |
+| projectId | UUID (FK) | Yes | Parent project |
+| testId | UUID (FK) | Yes | References `playwright_tests` |
+| releaseId | UUID (FK) | No | If targeting a specific release |
+| status | enum | Yes | `QUEUED`, `CLONING`, `INSTALLING`, `RUNNING`, `PASS`, `FAIL`, `ERROR`, `SKIPPED`, `TIMEOUT`, `CANCELLED` |
+| triggeredBy | enum | Yes | `UI`, `CI_CD` |
+| duration | int | No | Duration in milliseconds |
+| startedAt | timestamptz | Yes | |
+| completedAt | timestamptz | No | |
+| errorMessage | text | No | Failure message / stack trace |
+| logs | text | No | Stdout/stderr output |
+| externalRunId | varchar | No | CI job URL or run ID |
+| createdAt | timestamptz | Auto | |
+
+### Conflict Detection
+When a User Story has both manual TestExecution results and AutomationRun results (via linked tests), and they disagree (e.g., manual = PASS, automation = FAIL), the system flags a **conflict**. Conflicts are computed at read time — no separate entity. The story detail and release dashboard show a conflict indicator prompting human review.
 
 ## 5. Tech Stack
 
@@ -546,6 +623,321 @@ Created automatically on `Fail`, but also available manually.
 
 ---
 
+### Playwright Automation
+
+#### `POST /projects/:projectId/automation/registry/sync`
+**Roles**: `Admin`, `PM`, `Developer`. Syncs the test catalog from an external project. Creates new tests, updates existing, marks stale.
+```json
+// Request
+{
+  "tests": [
+    {
+      "externalId": "auth-login-001",
+      "testFile": "tests/auth/login.spec.ts",
+      "testName": "should login with valid credentials",
+      "tags": ["auth", "smoke"],
+      "storyExternalIds": ["story-uuid-1"]
+    }
+  ]
+}
+
+// Response 200
+{
+  "created": 3,
+  "updated": 1,
+  "linked": 2
+}
+```
+If `storyExternalIds` are included, auto-links tests to stories (linkedBy = `AUTO_DISCOVERY`).
+
+#### `GET /projects/:projectId/automation/tests`
+**Query params**: `?search=login&tags=smoke&linked=true&page=1&limit=20`
+```json
+// Response 200
+{
+  "data": [
+    {
+      "id": "uuid", "externalId": "auth-login-001",
+      "testFile": "tests/auth/login.spec.ts",
+      "testName": "should login with valid credentials",
+      "tags": ["auth", "smoke"],
+      "linkedStoryCount": 2,
+      "lastRunStatus": "PASS",
+      "lastRunAt": "...",
+      "lastSyncedAt": "..."
+    }
+  ],
+  "meta": { "..." }
+}
+```
+
+#### `GET /automation/tests/:id`
+```json
+// Response 200
+{
+  "id": "uuid", "projectId": "uuid",
+  "externalId": "auth-login-001",
+  "testFile": "tests/auth/login.spec.ts",
+  "testName": "should login with valid credentials",
+  "tags": ["auth", "smoke"],
+  "linkedStories": [
+    { "id": "uuid", "title": "Login Page", "linkedBy": "AUTO_DISCOVERY" }
+  ],
+  "recentRuns": [
+    { "id": "uuid", "status": "PASS", "duration": 1234, "triggeredBy": "CI_CD", "completedAt": "..." }
+  ],
+  "lastSyncedAt": "..."
+}
+```
+
+#### `DELETE /automation/tests/:id`
+**Roles**: `Admin`, `PM`.
+```
+// Response 204 No Content
+```
+
+#### `POST /stories/:storyId/automation/link`
+**Roles**: `Admin`, `PM`, `Developer`. Manually link tests to a story.
+```json
+// Request
+{ "testIds": ["uuid-1", "uuid-2"] }
+
+// Response 201
+{ "linked": 2 }
+```
+
+#### `DELETE /stories/:storyId/automation/link/:testId`
+**Roles**: `Admin`, `PM`, `Developer`.
+```
+// Response 204 No Content
+```
+
+#### `GET /stories/:storyId/automation/summary`
+Returns automation status summary for a story (all linked tests).
+```json
+// Response 200
+{
+  "linkedTests": 3,
+  "latestResults": {
+    "pass": 2, "fail": 1, "error": 0, "skipped": 0
+  },
+  "conflict": true,
+  "conflictDetail": {
+    "manualStatus": "PASS",
+    "automationStatus": "FAIL",
+    "failedTests": [
+      { "id": "uuid", "testName": "should reject invalid password", "lastRunAt": "..." }
+    ]
+  }
+}
+```
+
+#### `POST /projects/:projectId/automation/runs`
+**Roles**: `Admin`, `PM`, `Developer`. Report results from a CI/CD pipeline or trigger a run.
+```json
+// Request
+{
+  "triggeredBy": "CI_CD",
+  "releaseId": "uuid",
+  "results": [
+    {
+      "externalId": "auth-login-001",
+      "status": "PASS",
+      "duration": 1234,
+      "startedAt": "...",
+      "completedAt": "...",
+      "externalRunId": "https://github.com/org/repo/actions/runs/123"
+    },
+    {
+      "externalId": "auth-login-002",
+      "status": "FAIL",
+      "duration": 5678,
+      "startedAt": "...",
+      "completedAt": "...",
+      "errorMessage": "Expected element to be visible",
+      "logs": "..."
+    }
+  ]
+}
+
+// Response 201
+{ "recorded": 2, "releaseId": "uuid" }
+```
+
+#### `GET /projects/:projectId/automation/runs`
+**Query params**: `?testId=uuid&releaseId=uuid&status=FAIL&page=1&limit=20`
+```json
+// Response 200
+{
+  "data": [
+    {
+      "id": "uuid", "testName": "should login with valid credentials",
+      "status": "PASS", "duration": 1234,
+      "triggeredBy": "CI_CD", "externalRunId": "...",
+      "startedAt": "...", "completedAt": "..."
+    }
+  ],
+  "meta": { "..." }
+}
+```
+
+#### `GET /automation/runs/:id`
+Full detail for a single automation run.
+```json
+// Response 200
+{
+  "id": "uuid",
+  "test": { "id": "uuid", "testFile": "...", "testName": "..." },
+  "release": { "id": "uuid", "name": "v1.0" },
+  "status": "FAIL", "duration": 5678,
+  "triggeredBy": "CI_CD",
+  "startedAt": "...", "completedAt": "...",
+  "errorMessage": "Expected element to be visible",
+  "logs": "...",
+  "externalRunId": "https://github.com/org/repo/actions/runs/123",
+  "linkedStories": [
+    { "id": "uuid", "title": "Login Page" }
+  ]
+}
+```
+
+#### `POST /projects/:projectId/automation/trigger`
+**Roles**: `Admin`, `PM`, `Developer`. Trigger Playwright test execution from the UI.
+```json
+// Request
+{
+  "testIds": ["uuid-1", "uuid-2"],
+  "baseUrl": "https://staging.example.com",
+  "releaseId": "uuid"
+}
+
+// Response 202
+{
+  "batchId": "uuid",
+  "runs": [
+    { "id": "uuid", "testId": "uuid-1", "status": "QUEUED" },
+    { "id": "uuid", "testId": "uuid-2", "status": "QUEUED" }
+  ]
+}
+```
+
+#### `GET /automation/runs/:id/status`
+Poll for run progress (alternative to WebSocket updates).
+```json
+// Response 200
+{
+  "id": "uuid",
+  "status": "RUNNING",
+  "phase": "RUNNING",
+  "startedAt": "...",
+  "logs": "Running 1 test using 1 worker..."
+}
+```
+
+#### `POST /projects/:projectId/automation/tunnel`
+**Roles**: `Admin`, `PM`, `Developer`. Register a tunnel endpoint for local testing.
+```json
+// Request
+{ "localPort": 3000 }
+
+// Response 201
+{
+  "tunnelId": "uuid",
+  "tunnelUrl": "https://abc123.tunnel.veriflow.local",
+  "expiresAt": "..."
+}
+```
+
+#### `DELETE /automation/tunnel/:tunnelId`
+Tear down a tunnel session.
+```
+// Response 204 No Content
+```
+
+#### Role Permissions (Automation)
+
+| Action | Admin | PM | Developer | Tester |
+|---|---|---|---|---|
+| Sync test registry | Yes | Yes | Yes | No |
+| Link/unlink tests to stories | Yes | Yes | Yes | No |
+| Report automation results | Yes | Yes | Yes | No |
+| View automation results | Yes | Yes | Yes | Yes |
+| Delete tests from registry | Yes | Yes | No | No |
+| Trigger runs from UI | Yes | Yes | Yes | No |
+| Create tunnel | Yes | Yes | Yes | No |
+
+### Test Execution Infrastructure
+
+#### Git Repository Configuration
+Each project can configure a source repository for Playwright tests in project settings:
+
+| Field | Required | Description |
+|---|---|---|
+| repoUrl | Yes | Git clone URL (HTTPS or SSH) |
+| branch | No | Branch to clone (default: `main`) |
+| testDirectory | No | Path to Playwright tests (default: `tests/`) |
+| playwrightConfig | No | Path to `playwright.config.ts` (default: auto-detect) |
+| authToken | No | Personal access token or deploy key for private repos (encrypted at rest) |
+
+#### Test Worker Service
+A dedicated microservice responsible for executing Playwright tests. Runs as a separate Docker container alongside the main API.
+
+**Responsibilities**:
+1. Receive job from API (via job queue)
+2. Clone the configured git repository (with caching for repeated runs)
+3. Install dependencies (`npm ci`)
+4. Configure `baseURL` (public URL or tunnel URL)
+5. Execute Playwright tests (`npx playwright test --reporter=json`)
+6. Parse JSON reporter output
+7. Report results back to Veriflow API
+8. Clean up working directory
+
+**Worker environment**:
+- Docker container with Node.js + Playwright + browser binaries pre-installed
+- Isolated filesystem per run (no cross-contamination between projects)
+- Configurable concurrency (max simultaneous runs)
+- Timeout per run (default: 10 minutes)
+
+#### AutomationRun Status Lifecycle
+```
+QUEUED → CLONING → INSTALLING → RUNNING → PASS / FAIL / ERROR
+                                         └→ TIMEOUT (if exceeded max duration)
+                                         └→ CANCELLED (if user cancels)
+```
+
+#### Job Queue
+Communication between Veriflow API and Test Worker:
+- **Technology**: Bull (Redis-backed) for reliable job processing
+- **Job payload**: `{ runId, repoUrl, branch, testDirectory, testFile, testName, baseUrl, authToken }`
+- **Job events**: `active`, `completed`, `failed` → update AutomationRun status
+- **Retry policy**: No automatic retry — user can manually re-trigger
+- **Priority**: Jobs are FIFO per project
+
+#### Veriflow CLI (Tunnel)
+An npm package (`@veriflow/cli`) that developers install to expose local apps for automated testing.
+
+**Usage**:
+```bash
+npx @veriflow/cli tunnel --port 3000 --project <projectId> --token <apiToken>
+```
+
+**How it works**:
+1. CLI authenticates with Veriflow API using the provided token
+2. Establishes a WebSocket connection to Veriflow's tunnel server
+3. Veriflow assigns a unique tunnel URL (e.g., `https://<session>.tunnel.veriflow.local`)
+4. Incoming HTTP requests to the tunnel URL are forwarded over the WebSocket to the CLI
+5. CLI forwards requests to `localhost:<port>` and returns responses
+6. Tunnel stays active as long as the CLI process runs
+7. On disconnect, the tunnel URL is invalidated
+
+**Security**:
+- Tunnel URLs are random and unguessable (UUID-based)
+- Only the Veriflow test worker can route traffic through tunnels
+- Tunnels expire after a configurable timeout (default: 2 hours)
+- Encrypted WebSocket connection (WSS)
+
+---
+
 ### WebSocket Events
 
 All events flow through a Socket.io namespace. Client authenticates via token on connection.
@@ -720,6 +1112,7 @@ server/src/
   ├── releases/
   ├── test-execution/
   ├── bugs/
+  ├── automation/
   └── common/
         ├── decorators/
         ├── guards/
@@ -760,3 +1153,14 @@ server/src/
 - Notifications (in-app)
 - Reporting / export
 - Attachments (file upload for stories and bugs)
+
+### Phase 6 — Playwright Automation Integration
+- Playwright test registry (external projects push available tests via API)
+- N:N linking between User Stories and Playwright tests (manual + auto-discovery)
+- Automation run execution (trigger from UI + CI/CD result reporting)
+- Automation results display (summary card + drill-down on story/release pages)
+- Release-aware automation runs (optionally tied to a specific release)
+- Conflict detection (flag when manual and automated results disagree)
+- Test Worker service (separate microservice: git clone, install, run Playwright, report results)
+- Veriflow CLI with built-in tunnel for testing local/private apps
+- Job queue (API → Worker communication for test execution)

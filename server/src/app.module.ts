@@ -8,6 +8,7 @@ import { UserStoriesModule } from './user-stories/user-stories.module';
 import { ReleasesModule } from './releases/releases.module';
 import { TestExecutionModule } from './test-execution/test-execution.module';
 import { BugsModule } from './bugs/bugs.module';
+import { NotificationsModule } from './notifications/notifications.module';
 
 @Module({
   imports: [
@@ -27,6 +28,7 @@ import { BugsModule } from './bugs/bugs.module';
     ReleasesModule,
     TestExecutionModule,
     BugsModule,
+    NotificationsModule,
   ],
   controllers: [AppController],
 })

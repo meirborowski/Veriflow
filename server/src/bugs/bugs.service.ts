@@ -3,6 +3,8 @@ import {
   NotFoundException,
   BadRequestException,
   Logger,
+  Inject,
+  forwardRef,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, SelectQueryBuilder } from 'typeorm';
@@ -15,9 +17,15 @@ import { Release } from '../releases/entities/release.entity';
 import { CreateBugDto } from './dto/create-bug.dto';
 import { UpdateBugDto } from './dto/update-bug.dto';
 import { BugQueryDto } from './dto/bug-query.dto';
-import { BugSeverity, BugStatus } from '../common/types/enums';
+import {
+  BugSeverity,
+  BugStatus,
+  NotificationType,
+} from '../common/types/enums';
 import type { PaginatedResponse } from '../common/types/pagination';
 import type { BugReportDto } from '../test-execution/dto/submit-result.dto';
+import { NotificationsService } from '../notifications/notifications.service';
+import { NotificationsGateway } from '../notifications/notifications.gateway';
 
 export interface BugListItem {
   id: string;
@@ -45,6 +53,10 @@ export class BugsService {
     private readonly releaseStoryRepository: Repository<ReleaseStory>,
     @InjectRepository(Release)
     private readonly releaseRepository: Repository<Release>,
+    @Inject(forwardRef(() => NotificationsService))
+    private readonly notificationsService: NotificationsService,
+    @Inject(forwardRef(() => NotificationsGateway))
+    private readonly notificationsGateway: NotificationsGateway,
   ) {}
 
   async create(
@@ -229,6 +241,9 @@ export class BugsService {
       throw new NotFoundException('Bug not found');
     }
 
+    const previousAssignedToId = bug.assignedToId;
+    const previousStatus = bug.status;
+
     if (dto.assignedToId !== undefined && dto.assignedToId !== null) {
       const member = await this.memberRepository.findOne({
         where: { userId: dto.assignedToId, projectId: bug.projectId },
@@ -245,6 +260,32 @@ export class BugsService {
     await this.bugRepository.save(bug);
 
     this.logger.log(`Bug updated: id=${bugId}`);
+
+    // Notify assignee when assigned
+    if (dto.assignedToId && dto.assignedToId !== previousAssignedToId) {
+      const notification = await this.notificationsService.create({
+        userId: dto.assignedToId,
+        type: NotificationType.BUG_ASSIGNED,
+        title: 'Bug assigned to you',
+        message: `You have been assigned to bug: ${bug.title}`,
+        relatedEntityType: 'bug',
+        relatedEntityId: bugId,
+      });
+      this.notificationsGateway.notifyUser(dto.assignedToId, notification);
+    }
+
+    // Notify reporter when status changes
+    if (dto.status && dto.status !== previousStatus) {
+      const notification = await this.notificationsService.create({
+        userId: bug.reportedById,
+        type: NotificationType.BUG_STATUS_CHANGED,
+        title: 'Bug status changed',
+        message: `Bug "${bug.title}" status changed to ${dto.status}`,
+        relatedEntityType: 'bug',
+        relatedEntityId: bugId,
+      });
+      this.notificationsGateway.notifyUser(bug.reportedById, notification);
+    }
 
     return this.findOne(bugId);
   }

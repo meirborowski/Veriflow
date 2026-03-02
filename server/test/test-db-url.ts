@@ -18,8 +18,7 @@ export function resolveBaseUrl(): URL {
   }
 
   // Safety guard: prevent accidental test runs against remote databases
-  const isLocal =
-    url.hostname === 'localhost' || url.hostname === '127.0.0.1';
+  const isLocal = url.hostname === 'localhost' || url.hostname === '127.0.0.1';
   if (!isLocal && process.env.ALLOW_REMOTE_TEST_DB !== 'true') {
     throw new Error(
       `Refusing to run tests against remote host "${url.hostname}". ` +

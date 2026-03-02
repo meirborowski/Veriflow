@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ReleasesController } from './releases.controller';
 import { ReleasesService } from './releases.service';
@@ -10,6 +10,7 @@ import { ProjectMember } from '../projects/entities/project-member.entity';
 import { UserStory } from '../user-stories/entities/user-story.entity';
 import { TestExecution } from '../test-execution/entities/test-execution.entity';
 import { Bug } from '../bugs/entities/bug.entity';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { Bug } from '../bugs/entities/bug.entity';
       TestExecution,
       Bug,
     ]),
+    forwardRef(() => NotificationsModule),
   ],
   controllers: [ReleasesController],
   providers: [ReleasesService, RolesGuard],

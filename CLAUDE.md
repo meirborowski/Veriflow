@@ -26,6 +26,8 @@ Replace spreadsheet-based QA tracking with a real-time collaborative platform. *
 | Auth | JWT (access + refresh tokens) |
 | Validation | class-validator / class-transformer |
 | Testing | Jest |
+| Job Queue | Bull (Redis-backed) |
+| Test Runner | Playwright (dedicated worker service) |
 
 ### Project Structure
 ```
@@ -38,7 +40,10 @@ server/                  → NestJS 11 backend (port 3001)
     releases/            → Release lifecycle + snapshot freeze
     test-execution/      → WebSocket gateway + execution log
     bugs/                → Defect tracking
+    automation/          → Playwright test registry, linking, run results, trigger
     common/              → Guards, decorators, pipes, interceptors
+worker/                  → Test Worker service (Playwright execution)
+cli/                     → Veriflow CLI (@veriflow/cli) — tunnel for local testing
 ```
 
 ## Design & Style Guide

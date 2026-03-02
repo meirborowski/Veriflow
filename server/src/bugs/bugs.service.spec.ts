@@ -9,6 +9,8 @@ import { ProjectMember } from '../projects/entities/project-member.entity';
 import { Release } from '../releases/entities/release.entity';
 import { ReleaseStory } from '../releases/entities/release-story.entity';
 import { BugSeverity, BugStatus } from '../common/types/enums';
+import { NotificationsService } from '../notifications/notifications.service';
+import { NotificationsGateway } from '../notifications/notifications.gateway';
 
 describe('BugsService', () => {
   let service: BugsService;
@@ -54,6 +56,14 @@ describe('BugsService', () => {
     findOne: jest.fn(),
   };
 
+  const mockNotificationsService = {
+    create: jest.fn().mockResolvedValue({ id: 'notif-1' }),
+  };
+
+  const mockNotificationsGateway = {
+    notifyUser: jest.fn(),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -71,6 +81,14 @@ describe('BugsService', () => {
         {
           provide: getRepositoryToken(Release),
           useValue: mockReleaseRepo,
+        },
+        {
+          provide: NotificationsService,
+          useValue: mockNotificationsService,
+        },
+        {
+          provide: NotificationsGateway,
+          useValue: mockNotificationsGateway,
         },
       ],
     }).compile();
@@ -482,6 +500,82 @@ describe('BugsService', () => {
       await expect(
         service.update('bad-id', { status: BugStatus.CLOSED }),
       ).rejects.toThrow(NotFoundException);
+    });
+
+    it('should notify assignee when bug is assigned', async () => {
+      const bug = {
+        id: 'bug-1',
+        projectId: 'project-1',
+        title: 'Login fails',
+        status: BugStatus.OPEN,
+        assignedToId: null,
+        reportedById: 'user-1',
+      };
+
+      mockBugRepo.findOne.mockResolvedValueOnce(bug).mockResolvedValueOnce({
+        ...bug,
+        assignedToId: 'user-2',
+        story: { title: 'Login' },
+        execution: null,
+        reportedBy: { name: 'John' },
+        assignedTo: { name: 'Jane' },
+      });
+      mockMemberRepo.findOne.mockResolvedValue({ userId: 'user-2' });
+      mockBugRepo.save.mockResolvedValue({ ...bug, assignedToId: 'user-2' });
+
+      await service.update('bug-1', { assignedToId: 'user-2' });
+
+      expect(mockNotificationsService.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          userId: 'user-2',
+          type: 'BUG_ASSIGNED',
+          relatedEntityType: 'bug',
+          relatedEntityId: 'bug-1',
+        }),
+      );
+      expect(mockNotificationsGateway.notifyUser).toHaveBeenCalledWith(
+        'user-2',
+        expect.objectContaining({ id: 'notif-1' }),
+      );
+    });
+
+    it('should notify reporter when status changes', async () => {
+      const bug = {
+        id: 'bug-1',
+        projectId: 'project-1',
+        title: 'Login fails',
+        status: BugStatus.OPEN,
+        assignedToId: null,
+        reportedById: 'user-1',
+      };
+
+      mockBugRepo.findOne.mockResolvedValueOnce(bug).mockResolvedValueOnce({
+        ...bug,
+        status: BugStatus.RESOLVED,
+        story: { title: 'Login' },
+        execution: null,
+        reportedBy: { name: 'John' },
+        assignedTo: null,
+      });
+      mockBugRepo.save.mockResolvedValue({
+        ...bug,
+        status: BugStatus.RESOLVED,
+      });
+
+      await service.update('bug-1', { status: BugStatus.RESOLVED });
+
+      expect(mockNotificationsService.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          userId: 'user-1',
+          type: 'BUG_STATUS_CHANGED',
+          relatedEntityType: 'bug',
+          relatedEntityId: 'bug-1',
+        }),
+      );
+      expect(mockNotificationsGateway.notifyUser).toHaveBeenCalledWith(
+        'user-1',
+        expect.objectContaining({ id: 'notif-1' }),
+      );
     });
 
     it('should allow setting assignedToId to null', async () => {

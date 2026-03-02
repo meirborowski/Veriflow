@@ -52,3 +52,10 @@ export enum BugStatus {
   CLOSED = 'CLOSED',
   REOPENED = 'REOPENED',
 }
+
+export enum NotificationType {
+  BUG_ASSIGNED = 'BUG_ASSIGNED',
+  BUG_STATUS_CHANGED = 'BUG_STATUS_CHANGED',
+  RELEASE_CLOSED = 'RELEASE_CLOSED',
+  MEMBER_ADDED = 'MEMBER_ADDED',
+}
