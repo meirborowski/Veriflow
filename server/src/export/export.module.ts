@@ -8,6 +8,7 @@ import { TestExecution } from '../test-execution/entities/test-execution.entity'
 import { StepResult } from '../test-execution/entities/step-result.entity';
 import { Bug } from '../bugs/entities/bug.entity';
 import { ProjectMember } from '../projects/entities/project-member.entity';
+import { UserStory } from '../user-stories/entities/user-story.entity';
 import { RolesGuard } from '../common/guards/roles.guard';
 
 @Module({
@@ -19,6 +20,7 @@ import { RolesGuard } from '../common/guards/roles.guard';
       StepResult,
       Bug,
       ProjectMember,
+      UserStory,
     ]),
   ],
   controllers: [ExportController],
