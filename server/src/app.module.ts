@@ -9,6 +9,7 @@ import { ReleasesModule } from './releases/releases.module';
 import { TestExecutionModule } from './test-execution/test-execution.module';
 import { BugsModule } from './bugs/bugs.module';
 import { NotificationsModule } from './notifications/notifications.module';
+import { ExportModule } from './export/export.module';
 
 @Module({
   imports: [
@@ -29,6 +30,7 @@ import { NotificationsModule } from './notifications/notifications.module';
     TestExecutionModule,
     BugsModule,
     NotificationsModule,
+    ExportModule,
   ],
   controllers: [AppController],
 })

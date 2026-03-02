@@ -13,6 +13,8 @@ import type {
   ReleaseDetailDraftStory,
   ReleaseDetailSnapshotStory,
 } from '@/types/releases';
+import { ExportButton } from '@/components/export-button';
+import { useExportRelease } from '@/hooks/use-export';
 import { ReleaseDetailSkeleton } from './_components/release-detail-skeleton';
 import { DraftStoriesTable } from './_components/draft-stories-table';
 import { SnapshotStoriesTable } from './_components/snapshot-stories-table';
@@ -36,6 +38,7 @@ export default function ReleaseDetailPage({
   const { projectId, releaseId } = use(params);
   const { data: project } = useProject(projectId);
   const { data: release, isLoading, isError, refetch } = useRelease(releaseId);
+  const { exportRelease, loading: exportLoading } = useExportRelease(releaseId);
 
   if (isLoading) return <ReleaseDetailSkeleton />;
 
@@ -91,14 +94,17 @@ export default function ReleaseDetailPage({
             />
           </div>
         ) : (
-          <Button asChild>
-            <Link
-              href={`/projects/${projectId}/releases/${releaseId}/test-runner`}
-            >
-              <Play className="mr-2 h-4 w-4" />
-              Open Test Runner
-            </Link>
-          </Button>
+          <div className="flex items-center gap-2">
+            <ExportButton onExport={exportRelease} loading={exportLoading} />
+            <Button asChild>
+              <Link
+                href={`/projects/${projectId}/releases/${releaseId}/test-runner`}
+              >
+                <Play className="mr-2 h-4 w-4" />
+                Open Test Runner
+              </Link>
+            </Button>
+          </div>
         )}
       </div>
 
