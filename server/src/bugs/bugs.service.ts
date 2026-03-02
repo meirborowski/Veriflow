@@ -256,7 +256,10 @@ export class BugsService {
       }
     }
 
-    Object.assign(bug, dto);
+    const definedFields = Object.fromEntries(
+      Object.entries(dto).filter(([, v]) => v !== undefined),
+    );
+    Object.assign(bug, definedFields);
     await this.bugRepository.save(bug);
 
     this.logger.log(`Bug updated: id=${bugId}`);

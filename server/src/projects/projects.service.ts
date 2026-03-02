@@ -181,7 +181,10 @@ export class ProjectsService {
       throw new NotFoundException('Project not found');
     }
 
-    Object.assign(project, dto);
+    const definedFields = Object.fromEntries(
+      Object.entries(dto).filter(([, v]) => v !== undefined),
+    );
+    Object.assign(project, definedFields);
     const updated = await this.projectRepository.save(project);
 
     this.logger.log(`Project updated: id=${projectId}`);
