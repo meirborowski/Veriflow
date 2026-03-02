@@ -23,6 +23,12 @@ export function SortableHeader({
 }: SortableHeaderProps) {
   const isActive = currentOrderBy === column;
 
+  const ariaSortValue = isActive
+    ? currentSortDir === 'ASC'
+      ? 'ascending'
+      : 'descending'
+    : 'none';
+
   function handleClick() {
     if (isActive && currentSortDir === 'ASC') {
       onSort(column, 'DESC');
@@ -34,11 +40,12 @@ export function SortableHeader({
   }
 
   return (
-    <TableHead
-      className={cn('cursor-pointer select-none', className)}
-      onClick={handleClick}
-    >
-      <span className="inline-flex items-center gap-1">
+    <TableHead className={cn(className)} aria-sort={ariaSortValue}>
+      <button
+        type="button"
+        className="inline-flex cursor-pointer items-center gap-1 select-none"
+        onClick={handleClick}
+      >
         {label}
         {isActive && currentSortDir === 'ASC' ? (
           <ArrowUp className="h-3.5 w-3.5" />
@@ -47,7 +54,7 @@ export function SortableHeader({
         ) : (
           <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground/50" />
         )}
-      </span>
+      </button>
     </TableHead>
   );
 }
