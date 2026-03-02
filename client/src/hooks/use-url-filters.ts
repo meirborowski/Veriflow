@@ -46,7 +46,7 @@ export function useUrlFilters(defaults: Record<string, string> = {}) {
       }
 
       const query = params.toString();
-      router.push(`${pathname}${query ? `?${query}` : ''}`);
+      router.replace(`${pathname}${query ? `?${query}` : ''}`);
     },
     [searchParams, router, pathname],
   );
