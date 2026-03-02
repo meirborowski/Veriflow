@@ -238,22 +238,29 @@ export class ProjectsService {
       `Member added: project=${projectId}, user=${user.id}, role=${dto.role}`,
     );
 
-    // Notify the invited user
-    const project = await this.projectRepository.findOne({
-      where: { id: projectId },
-      select: ['id', 'name'],
-    });
-
-    if (project) {
-      const notification = await this.notificationsService.create({
-        userId: user.id,
-        type: NotificationType.MEMBER_ADDED,
-        title: 'Added to project',
-        message: `You have been added to project "${project.name}" as ${dto.role}`,
-        relatedEntityType: 'project',
-        relatedEntityId: projectId,
+    // Notify the invited user (best-effort)
+    try {
+      const project = await this.projectRepository.findOne({
+        where: { id: projectId },
+        select: ['id', 'name'],
       });
-      this.notificationsGateway.notifyUser(user.id, notification);
+
+      if (project) {
+        const notification = await this.notificationsService.create({
+          userId: user.id,
+          type: NotificationType.MEMBER_ADDED,
+          title: 'Added to project',
+          message: `You have been added to project "${project.name}" as ${dto.role}`,
+          relatedEntityType: 'project',
+          relatedEntityId: projectId,
+        });
+        this.notificationsGateway.notifyUser(user.id, notification);
+      }
+    } catch (error) {
+      this.logger.error(
+        `Failed to send MEMBER_ADDED notification for project ${projectId}`,
+        error instanceof Error ? error.stack : String(error),
+      );
     }
 
     return saved;

@@ -114,6 +114,7 @@ describe('Notifications (e2e)', () => {
       const notifications = (
         notifRes.body as {
           data: {
+            id: string;
             type: string;
             relatedEntityType: string;
             relatedEntityId: string;
@@ -136,7 +137,7 @@ describe('Notifications (e2e)', () => {
       );
 
       // Mark as read
-      const notifId = notifications[0].id as unknown as string;
+      const notifId = notifications[0].id;
       await request(app.getHttpServer())
         .patch(`/api/v1/notifications/${notifId}/read`)
         .set('Authorization', invitee.authHeader)
