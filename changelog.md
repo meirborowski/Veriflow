@@ -1,6 +1,17 @@
 # Changelog
 
+## 2026-03-02
+
+- feat: add ILIKE search to bugs (title/description), releases (name), and projects (name) list endpoints
+- feat: add dynamic sort (orderBy + sortDir) with allowlisted columns to all list endpoints
+- feat: create ProjectQueryDto and refactor projects.findAllForUser to QueryBuilder
+- feat: add useUrlFilters hook for URL-persisted filter/sort/pagination state via searchParams
+- feat: add SortableHeader component with ASC/DESC/clear toggle and aria-sort accessibility
+- feat: update all list pages (projects, stories, releases, bugs) with search inputs, sortable headers, and URL-persisted filters
+- test: add unit tests for search and sort in bugs, releases, user-stories, and projects service specs
+
 ## 2026-03-01
+
 - test: add E2E test infrastructure (global-setup/teardown, db/app/auth/seed helpers, jest-e2e/integration configs)
 - test: add auth E2E tests (16 tests — register, login, refresh, me, throttle)
 - test: add projects E2E tests (22 tests — CRUD, members, roles, access control)
@@ -39,6 +50,7 @@
 - test: add 3 unit tests for auto-bug-creation in TestExecutionService (FAIL+bug, PASS+bug, FAIL-no-bug)
 
 ## 2026-02-26
+
 - feat: add TestExecution and StepResult entities with TypeORM relations (test_executions, step_results tables)
 - feat: add WebSocket gateway (/test-runner namespace) with JWT auth, heartbeat, disconnect cleanup
 - feat: add real-time story assignment with FOR UPDATE SKIP LOCKED to prevent double-booking
@@ -75,6 +87,7 @@
 - fix: remove extra argument in heartbeat gateway test
 
 ## 2026-02-25
+
 - feat: redesign dashboard sidebar with project-scoped navigation (Overview, Stories, Releases, Settings)
 - feat: add route-aware sidebar that switches between global and project-scoped nav based on URL
 - feat: polish auth pages with slate-50 background, card shadow, branded icon mark, and error alert icons
@@ -92,6 +105,7 @@
 - docs: add ui-ux-guideline.md with modern, tool-focused design principles and reference it in CLAUDE.md
 
 ## 2026-02-19
+
 - feat: add release types and TanStack Query hooks (list, detail, create, update, delete, close, add/remove stories)
 - feat: add release list page with status filter, pagination, empty state, and skeleton loading
 - feat: add create release dialog with redirect to detail page on success
@@ -117,6 +131,7 @@
 - test: add 3 unit tests for RolesGuard release resolution
 
 ## 2026-02-18
+
 - feat: add User Story and VerificationStep entities with TypeORM relations
 - feat: add user stories service with CRUD, step sync algorithm, pagination, and filtering
 - feat: add user stories controller with project-scoped and story-scoped routes
@@ -144,6 +159,7 @@
 - chore: install shadcn components (dialog, table, dropdown-menu, badge, select, skeleton, textarea, separator, alert-dialog)
 
 ## 2026-02-17
+
 - fix: prevent demoting last admin via updateMemberRole (was allowing project to lose all admins)
 - fix: add refresh promise lock to prevent concurrent 401s from triggering multiple token refreshes
 - feat: add @MaxLength(2000) to description field in CreateProjectDto and UpdateProjectDto
@@ -151,6 +167,7 @@
 - test: add 2 unit tests for last-admin demotion guard in updateMemberRole (23 total)
 
 ## 2026-02-16 (Auth Client)
+
 - feat: add API client with token refresh and 401 retry logic
 - feat: add AuthProvider context with login, register, logout, and session restore
 - feat: add TanStack Query provider for server state management
@@ -163,6 +180,7 @@
 - chore: install Shadcn/UI (button, input, label, card, sonner), lucide-react, @tanstack/react-query
 
 ## 2026-02-16 (Projects Backend)
+
 - feat: add Project entity with UUID PK, name, description, timestamps
 - feat: add ProjectMember entity with composite PK (userId + projectId), role, join date
 - feat: add @Roles() decorator and RolesGuard for per-project role-based access control
@@ -175,6 +193,7 @@
 - test: add 8 unit tests for ProjectsController
 
 ## 2026-02-15 (Auth)
+
 - feat: add User entity with UUID PK, hashed password, hashed refresh token
 - feat: add auth module (register, login, refresh, me) with JWT access + refresh tokens
 - feat: add JWT strategy (passport-jwt) with Bearer token extraction
@@ -185,6 +204,7 @@
 - test: add 19 unit tests for auth service, controller, strategy, guard, decorators
 
 ## 2026-02-15 (Infrastructure)
+
 - feat: add PostgreSQL + TypeORM connection with ConfigModule
 - feat: add global ValidationPipe with whitelist, forbidNonWhitelisted, field-level errors
 - feat: add global HttpExceptionFilter with standardized error shape
@@ -194,6 +214,7 @@
 - test: add 11 unit tests for ValidationPipe and HttpExceptionFilter
 
 ## 2026-02-15
+
 - chore: clean up template scaffolding from Next.js and NestJS
 - chore: add Docker Compose dev environment (PostgreSQL, server, client with hot-reload)
 - chore: add Dockerfile.dev for server and client
