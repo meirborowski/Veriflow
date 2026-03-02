@@ -157,10 +157,13 @@ export class UserStoriesService {
     }
 
     const { steps: stepsDto, ...scalarFields } = dto;
+    const definedFields = Object.fromEntries(
+      Object.entries(scalarFields).filter(([, v]) => v !== undefined),
+    );
 
     await this.dataSource.transaction(async (manager) => {
-      if (Object.keys(scalarFields).length > 0) {
-        Object.assign(story, scalarFields);
+      if (Object.keys(definedFields).length > 0) {
+        Object.assign(story, definedFields);
         await manager.getRepository(UserStory).save(story);
       }
 

@@ -191,7 +191,10 @@ export class ReleasesService {
       throw new ConflictException('Release is already closed');
     }
 
-    Object.assign(release, dto);
+    const definedFields = Object.fromEntries(
+      Object.entries(dto).filter(([, v]) => v !== undefined),
+    );
+    Object.assign(release, definedFields);
     const saved = await this.releaseRepository.save(release);
 
     this.logger.log(`Release updated: id=${releaseId}`);
