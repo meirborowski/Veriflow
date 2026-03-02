@@ -2,6 +2,16 @@
 
 ## 2026-03-02
 
+- feat: add CSV and PDF export module for release reports and bug lists
+- feat: add streaming CSV generation via fast-csv with release story/step/execution data
+- feat: add PDF generation via pdfkit with formatted release reports and bug reports
+- feat: add export controller with role-guarded endpoints (GET releases/:id/export, GET projects/:projectId/bugs/export)
+- feat: add client ExportButton dropdown component with CSV/PDF options
+- feat: add useExportRelease and useExportBugs hooks with authenticated blob download
+- feat: add export button to closed release detail page and bugs list page
+- test: add 11 unit tests for ExportService (CSV/PDF generation, filters, edge cases)
+- test: add 6 unit tests for ExportController (format routing, validation)
+- test: add E2E tests for export endpoints (auth, format validation, CSV/PDF content, role enforcement)
 - feat: add in-app notifications module (entity, service, controller, gateway) with WebSocket real-time delivery
 - feat: add NotificationType enum (BUG_ASSIGNED, BUG_STATUS_CHANGED, RELEASE_CLOSED, MEMBER_ADDED)
 - feat: trigger notifications on bug assignment, bug status change, release close, and member addition

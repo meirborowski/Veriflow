@@ -44,8 +44,10 @@ import { Pagination } from '@/components/pagination';
 import { SortableHeader } from '@/components/sortable-header';
 import { BugSeverityBadge } from '@/components/bug-severity-badge';
 import { BugStatusBadge } from '@/components/bug-status-badge';
+import { ExportButton } from '@/components/export-button';
 import { useProject } from '@/hooks/use-projects';
 import { useBugs, useDeleteBug } from '@/hooks/use-bugs';
+import { useExportBugs } from '@/hooks/use-export';
 import { useUrlFilters } from '@/hooks/use-url-filters';
 import { BugSeverity, BugStatus } from '@/types/bugs';
 import type { BugListItem } from '@/types/bugs';
@@ -231,6 +233,7 @@ function BugsPageContent({
   projectId: string;
 }) {
   const { data: project } = useProject(projectId);
+  const { exportBugs, loading: exportLoading } = useExportBugs(projectId);
   const { get, getNumber, set, setPage } = useUrlFilters();
   const page = getNumber('page', 1);
   const status = get('status');
@@ -277,6 +280,16 @@ function BugsPageContent({
 
       <div className="mt-4 flex items-center justify-between">
         <h1 className="text-2xl font-semibold tracking-tight">Bugs</h1>
+        <ExportButton
+          onExport={(format) =>
+            exportBugs(format, {
+              status: status || '',
+              severity: severity || '',
+              search: debouncedSearch || '',
+            })
+          }
+          loading={exportLoading}
+        />
       </div>
 
       <div className="mt-4 flex items-center gap-3">
