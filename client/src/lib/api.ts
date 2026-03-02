@@ -114,6 +114,10 @@ export class ApiError extends Error {
   }
 }
 
+export async function refreshAndGetToken(): Promise<string | null> {
+  return refreshAccessToken();
+}
+
 export const api = {
   get: <T>(endpoint: string, options?: ApiOptions) =>
     request<T>(endpoint, { ...options, method: 'GET' }),

@@ -13,7 +13,7 @@ import { Roles } from '../common/decorators/roles.decorator';
 import { ResolveProjectFrom } from '../common/decorators/resolve-project.decorator';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { UserRole } from '../common/types/enums';
-import { BugQueryDto } from '../bugs/dto/bug-query.dto';
+import { BugExportQueryDto } from './dto/bug-export-query.dto';
 
 @Controller()
 @UseGuards(RolesGuard)
@@ -51,11 +51,10 @@ export class ExportController {
   @Roles(UserRole.ADMIN, UserRole.PM, UserRole.DEVELOPER, UserRole.TESTER)
   async exportBugs(
     @Param('projectId') projectId: string,
-    @Query('format') format: string,
-    @Query() query: BugQueryDto,
+    @Query() query: BugExportQueryDto,
     @Res() res: Response,
   ): Promise<void> {
-    if (format === 'csv') {
+    if (query.format === 'csv') {
       const stream = await this.exportService.generateBugExportCsv(
         projectId,
         query,
@@ -65,7 +64,7 @@ export class ExportController {
         'Content-Disposition': `attachment; filename="bugs-export-${projectId}.csv"`,
       });
       stream.pipe(res);
-    } else if (format === 'pdf') {
+    } else if (query.format === 'pdf') {
       const stream = await this.exportService.generateBugExportPdf(
         projectId,
         query,

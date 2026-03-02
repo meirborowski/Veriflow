@@ -5,7 +5,6 @@ import { ExportController } from './export.controller';
 import { Release } from '../releases/entities/release.entity';
 import { ReleaseStory } from '../releases/entities/release-story.entity';
 import { TestExecution } from '../test-execution/entities/test-execution.entity';
-import { StepResult } from '../test-execution/entities/step-result.entity';
 import { Bug } from '../bugs/entities/bug.entity';
 import { ProjectMember } from '../projects/entities/project-member.entity';
 import { UserStory } from '../user-stories/entities/user-story.entity';
@@ -17,7 +16,6 @@ import { RolesGuard } from '../common/guards/roles.guard';
       Release,
       ReleaseStory,
       TestExecution,
-      StepResult,
       Bug,
       ProjectMember,
       UserStory,
