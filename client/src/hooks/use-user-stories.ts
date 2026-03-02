@@ -15,6 +15,8 @@ interface StoryQueryParams {
   status?: string;
   priority?: string;
   search?: string;
+  orderBy?: string;
+  sortDir?: string;
 }
 
 export const storyKeys = {
@@ -33,6 +35,8 @@ export function useStories(projectId: string, params: StoryQueryParams = {}) {
   if (params.status) searchParams.set('status', params.status);
   if (params.priority) searchParams.set('priority', params.priority);
   if (params.search) searchParams.set('search', params.search);
+  if (params.orderBy) searchParams.set('orderBy', params.orderBy);
+  if (params.sortDir) searchParams.set('sortDir', params.sortDir);
 
   const query = searchParams.toString();
   const url = `/projects/${projectId}/stories${query ? `?${query}` : ''}`;

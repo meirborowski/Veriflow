@@ -335,6 +335,74 @@ describe('BugsService', () => {
         severity: BugSeverity.CRITICAL,
       });
     });
+
+    it('should apply search filter on title and description', async () => {
+      const mockQb = {
+        select: jest.fn().mockReturnThis(),
+        innerJoin: jest.fn().mockReturnThis(),
+        leftJoin: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        orderBy: jest.fn().mockReturnThis(),
+        offset: jest.fn().mockReturnThis(),
+        limit: jest.fn().mockReturnThis(),
+        getRawMany: jest.fn().mockResolvedValue([]),
+      };
+
+      const mockCountQb = {
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        getCount: jest.fn().mockResolvedValue(0),
+      };
+
+      mockBugRepo.createQueryBuilder
+        .mockReturnValueOnce(mockQb)
+        .mockReturnValueOnce(mockCountQb);
+
+      await service.findAllByProject('project-1', {
+        page: 1,
+        limit: 20,
+        search: 'login',
+      });
+
+      expect(mockQb.andWhere).toHaveBeenCalledWith(
+        '(bug.title ILIKE :search OR bug.description ILIKE :search)',
+        { search: '%login%' },
+      );
+    });
+
+    it('should apply dynamic sort order', async () => {
+      const mockQb = {
+        select: jest.fn().mockReturnThis(),
+        innerJoin: jest.fn().mockReturnThis(),
+        leftJoin: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        orderBy: jest.fn().mockReturnThis(),
+        offset: jest.fn().mockReturnThis(),
+        limit: jest.fn().mockReturnThis(),
+        getRawMany: jest.fn().mockResolvedValue([]),
+      };
+
+      const mockCountQb = {
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        getCount: jest.fn().mockResolvedValue(0),
+      };
+
+      mockBugRepo.createQueryBuilder
+        .mockReturnValueOnce(mockQb)
+        .mockReturnValueOnce(mockCountQb);
+
+      await service.findAllByProject('project-1', {
+        page: 1,
+        limit: 20,
+        orderBy: 'title',
+        sortDir: 'ASC',
+      });
+
+      expect(mockQb.orderBy).toHaveBeenCalledWith('bug.title', 'ASC');
+    });
   });
 
   describe('findOne', () => {

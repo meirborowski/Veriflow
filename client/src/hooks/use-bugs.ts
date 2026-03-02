@@ -25,6 +25,9 @@ export function useBugs(projectId: string, params: BugQueryParams = {}) {
   if (params.status) searchParams.set('status', params.status);
   if (params.severity) searchParams.set('severity', params.severity);
   if (params.storyId) searchParams.set('storyId', params.storyId);
+  if (params.search) searchParams.set('search', params.search);
+  if (params.orderBy) searchParams.set('orderBy', params.orderBy);
+  if (params.sortDir) searchParams.set('sortDir', params.sortDir);
 
   const query = searchParams.toString();
   const url = `/projects/${projectId}/bugs${query ? `?${query}` : ''}`;

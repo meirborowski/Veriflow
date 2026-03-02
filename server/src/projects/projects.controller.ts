@@ -16,7 +16,7 @@ import { CreateProjectDto } from './dto/create-project.dto';
 import { UpdateProjectDto } from './dto/update-project.dto';
 import { AddMemberDto } from './dto/add-member.dto';
 import { UpdateMemberRoleDto } from './dto/update-member-role.dto';
-import { PaginationQueryDto } from './dto/pagination-query.dto';
+import { ProjectQueryDto } from './dto/project-query.dto';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import type { JwtPayload } from '../common/decorators/current-user.decorator';
 import { Roles } from '../common/decorators/roles.decorator';
@@ -35,12 +35,8 @@ export class ProjectsController {
   }
 
   @Get()
-  findAll(@CurrentUser() user: JwtPayload, @Query() query: PaginationQueryDto) {
-    return this.projectsService.findAllForUser(
-      user.userId,
-      query.page,
-      query.limit,
-    );
+  findAll(@CurrentUser() user: JwtPayload, @Query() query: ProjectQueryDto) {
+    return this.projectsService.findAllForUser(user.userId, query);
   }
 
   @Get(':id')

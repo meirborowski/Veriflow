@@ -8,19 +8,36 @@ import type {
   UserRole,
 } from '@/types/projects';
 
+interface ProjectQueryParams {
+  page?: number;
+  limit?: number;
+  search?: string;
+  orderBy?: string;
+  sortDir?: string;
+}
+
 export const projectKeys = {
   all: ['projects'] as const,
   lists: () => [...projectKeys.all, 'list'] as const,
-  list: (page: number, limit: number) => [...projectKeys.lists(), { page, limit }] as const,
+  list: (params?: ProjectQueryParams) => [...projectKeys.lists(), params] as const,
   details: () => [...projectKeys.all, 'detail'] as const,
   detail: (id: string) => [...projectKeys.details(), id] as const,
 };
 
-export function useProjects(page: number, limit: number) {
+export function useProjects(params: ProjectQueryParams = {}) {
+  const searchParams = new URLSearchParams();
+  if (params.page) searchParams.set('page', String(params.page));
+  if (params.limit) searchParams.set('limit', String(params.limit));
+  if (params.search) searchParams.set('search', params.search);
+  if (params.orderBy) searchParams.set('orderBy', params.orderBy);
+  if (params.sortDir) searchParams.set('sortDir', params.sortDir);
+
+  const query = searchParams.toString();
+  const url = `/projects${query ? `?${query}` : ''}`;
+
   return useQuery({
-    queryKey: projectKeys.list(page, limit),
-    queryFn: () =>
-      api.get<PaginatedResponse<ProjectWithRole>>(`/projects?page=${page}&limit=${limit}`),
+    queryKey: projectKeys.list(params),
+    queryFn: () => api.get<PaginatedResponse<ProjectWithRole>>(url),
   });
 }
 

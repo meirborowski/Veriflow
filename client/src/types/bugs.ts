@@ -78,6 +78,9 @@ export interface BugQueryParams {
   status?: BugStatus;
   severity?: BugSeverity;
   storyId?: string;
+  search?: string;
+  orderBy?: string;
+  sortDir?: string;
 }
 
 export interface PaginatedBugs {

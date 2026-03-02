@@ -83,8 +83,16 @@ export class ReleasesService {
 
     const total = await countQb.getCount();
 
+    const allowedSort: Record<string, string> = {
+      createdAt: 'release.createdAt',
+      name: 'release.name',
+      status: 'release.status',
+    };
+    const sortColumn = allowedSort[query.orderBy ?? ''] ?? 'release.createdAt';
+    const sortDir = query.sortDir === 'ASC' ? 'ASC' : 'DESC';
+
     const data = await qb
-      .orderBy('release.createdAt', 'DESC')
+      .orderBy(sortColumn, sortDir)
       .offset((query.page - 1) * query.limit)
       .limit(query.limit)
       .getRawMany<ReleaseListItem>();
@@ -384,6 +392,11 @@ export class ReleasesService {
   ): void {
     if (query.status) {
       qb.andWhere('release.status = :status', { status: query.status });
+    }
+    if (query.search) {
+      qb.andWhere('release.name ILIKE :search', {
+        search: `%${query.search}%`,
+      });
     }
   }
 }

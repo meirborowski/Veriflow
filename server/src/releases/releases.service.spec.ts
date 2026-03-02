@@ -217,6 +217,70 @@ describe('ReleasesService', () => {
       expect(result.data).toHaveLength(0);
       expect(result.meta.total).toBe(0);
     });
+
+    it('should apply search filter on name', async () => {
+      const mockQb = {
+        select: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        orderBy: jest.fn().mockReturnThis(),
+        offset: jest.fn().mockReturnThis(),
+        limit: jest.fn().mockReturnThis(),
+        getRawMany: jest.fn().mockResolvedValue([]),
+      };
+
+      const mockCountQb = {
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        getCount: jest.fn().mockResolvedValue(0),
+      };
+
+      mockReleaseRepo.createQueryBuilder
+        .mockReturnValueOnce(mockQb)
+        .mockReturnValueOnce(mockCountQb);
+
+      await service.findAllByProject('proj-1', {
+        page: 1,
+        limit: 20,
+        search: 'v1',
+      });
+
+      expect(mockQb.andWhere).toHaveBeenCalledWith(
+        'release.name ILIKE :search',
+        { search: '%v1%' },
+      );
+    });
+
+    it('should apply dynamic sort order', async () => {
+      const mockQb = {
+        select: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        orderBy: jest.fn().mockReturnThis(),
+        offset: jest.fn().mockReturnThis(),
+        limit: jest.fn().mockReturnThis(),
+        getRawMany: jest.fn().mockResolvedValue([]),
+      };
+
+      const mockCountQb = {
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        getCount: jest.fn().mockResolvedValue(0),
+      };
+
+      mockReleaseRepo.createQueryBuilder
+        .mockReturnValueOnce(mockQb)
+        .mockReturnValueOnce(mockCountQb);
+
+      await service.findAllByProject('proj-1', {
+        page: 1,
+        limit: 20,
+        orderBy: 'name',
+        sortDir: 'ASC',
+      });
+
+      expect(mockQb.orderBy).toHaveBeenCalledWith('release.name', 'ASC');
+    });
   });
 
   describe('findOne', () => {

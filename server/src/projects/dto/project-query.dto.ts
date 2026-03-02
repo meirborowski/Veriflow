@@ -1,16 +1,7 @@
-import {
-  IsEnum,
-  IsOptional,
-  IsInt,
-  IsString,
-  IsIn,
-  Min,
-  Max,
-} from 'class-validator';
 import { Type } from 'class-transformer';
-import { ReleaseStatus } from '../../common/types/enums';
+import { IsInt, IsOptional, IsString, IsIn, Max, Min } from 'class-validator';
 
-export class ReleaseQueryDto {
+export class ProjectQueryDto {
   @IsOptional()
   @Type(() => Number)
   @IsInt()
@@ -25,15 +16,11 @@ export class ReleaseQueryDto {
   limit: number = 20;
 
   @IsOptional()
-  @IsEnum(ReleaseStatus)
-  status?: ReleaseStatus;
-
-  @IsOptional()
   @IsString()
   search?: string;
 
   @IsOptional()
-  @IsIn(['createdAt', 'name', 'status'])
+  @IsIn(['createdAt', 'name'])
   orderBy?: string;
 
   @IsOptional()

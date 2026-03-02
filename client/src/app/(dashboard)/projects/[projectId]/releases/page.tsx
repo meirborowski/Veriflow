@@ -1,8 +1,9 @@
 'use client';
 
-import { use, useState } from 'react';
+import { use, useState, useEffect, Suspense } from 'react';
 import { Package } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import {
   Select,
   SelectContent,
@@ -14,6 +15,7 @@ import { Breadcrumbs } from '@/components/breadcrumbs';
 import { Pagination } from '@/components/pagination';
 import { useProject } from '@/hooks/use-projects';
 import { useReleases } from '@/hooks/use-releases';
+import { useUrlFilters } from '@/hooks/use-url-filters';
 import { ReleaseStatus } from '@/types/releases';
 import { ReleasesTable } from './_components/releases-table';
 import { ReleasesTableSkeleton } from './_components/releases-table-skeleton';
@@ -21,21 +23,43 @@ import { CreateReleaseDialog } from './_components/create-release-dialog';
 
 const PAGE_SIZE = 20;
 
-export default function ReleasesPage({
-  params,
+function ReleasesPageContent({
+  projectId,
 }: {
-  params: Promise<{ projectId: string }>;
+  projectId: string;
 }) {
-  const { projectId } = use(params);
   const { data: project } = useProject(projectId);
-  const [page, setPage] = useState(1);
-  const [status, setStatus] = useState<string>('');
+  const { get, getNumber, set, setPage } = useUrlFilters();
+  const page = getNumber('page', 1);
+  const status = get('status');
+  const orderBy = get('orderBy');
+  const sortDir = get('sortDir');
+
+  const [search, setSearch] = useState(get('search'));
+  const [debouncedSearch, setDebouncedSearch] = useState(get('search'));
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+      if (search !== get('search')) {
+        set({ search: search || null });
+      }
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [search]);
 
   const { data, isLoading, isError, refetch } = useReleases(projectId, {
     page,
     limit: PAGE_SIZE,
     status: status || undefined,
+    search: debouncedSearch || undefined,
+    orderBy: orderBy || undefined,
+    sortDir: sortDir || undefined,
   });
+
+  function handleSort(column: string, dir: string) {
+    set({ orderBy: column || null, sortDir: dir || null });
+  }
 
   return (
     <div className="max-w-6xl">
@@ -53,11 +77,16 @@ export default function ReleasesPage({
       </div>
 
       <div className="mt-4 flex items-center gap-3">
+        <Input
+          placeholder="Search releases..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="max-w-xs"
+        />
         <Select
-          value={status}
+          value={status || 'ALL'}
           onValueChange={(value) => {
-            setStatus(value === 'ALL' ? '' : value);
-            setPage(1);
+            set({ status: value === 'ALL' ? null : value });
           }}
         >
           <SelectTrigger className="w-[140px]">
@@ -93,7 +122,13 @@ export default function ReleasesPage({
           </div>
         ) : data && data.data.length > 0 ? (
           <>
-            <ReleasesTable releases={data.data} projectId={projectId} />
+            <ReleasesTable
+              releases={data.data}
+              projectId={projectId}
+              orderBy={orderBy}
+              sortDir={sortDir}
+              onSort={handleSort}
+            />
             {data.meta.totalPages > 1 && (
               <div className="mt-4">
                 <Pagination
@@ -117,5 +152,18 @@ export default function ReleasesPage({
         )}
       </div>
     </div>
+  );
+}
+
+export default function ReleasesPage({
+  params,
+}: {
+  params: Promise<{ projectId: string }>;
+}) {
+  const { projectId } = use(params);
+  return (
+    <Suspense fallback={<ReleasesTableSkeleton />}>
+      <ReleasesPageContent projectId={projectId} />
+    </Suspense>
   );
 }

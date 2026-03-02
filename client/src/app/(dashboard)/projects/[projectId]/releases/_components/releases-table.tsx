@@ -11,6 +11,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { SortableHeader } from '@/components/sortable-header';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -44,9 +45,12 @@ function formatDate(dateString: string): string {
 interface ReleasesTableProps {
   releases: ReleaseListItem[];
   projectId: string;
+  orderBy: string;
+  sortDir: string;
+  onSort: (column: string, dir: string) => void;
 }
 
-export function ReleasesTable({ releases, projectId }: ReleasesTableProps) {
+export function ReleasesTable({ releases, projectId, orderBy, sortDir, onSort }: ReleasesTableProps) {
   const deleteRelease = useDeleteRelease();
   const [deleteTarget, setDeleteTarget] = useState<ReleaseListItem | null>(null);
 
@@ -62,10 +66,10 @@ export function ReleasesTable({ releases, projectId }: ReleasesTableProps) {
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Name</TableHead>
-            <TableHead>Status</TableHead>
+            <SortableHeader label="Name" column="name" currentOrderBy={orderBy} currentSortDir={sortDir} onSort={onSort} />
+            <SortableHeader label="Status" column="status" currentOrderBy={orderBy} currentSortDir={sortDir} onSort={onSort} />
             <TableHead>Stories</TableHead>
-            <TableHead>Created</TableHead>
+            <SortableHeader label="Created" column="createdAt" currentOrderBy={orderBy} currentSortDir={sortDir} onSort={onSort} />
             <TableHead>Closed</TableHead>
             <TableHead className="w-12" />
           </TableRow>

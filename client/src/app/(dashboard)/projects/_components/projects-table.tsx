@@ -12,6 +12,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { SortableHeader } from '@/components/sortable-header';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -42,7 +43,14 @@ function formatDate(dateString: string): string {
   });
 }
 
-export function ProjectsTable({ projects }: { projects: ProjectWithRole[] }) {
+interface ProjectsTableProps {
+  projects: ProjectWithRole[];
+  orderBy: string;
+  sortDir: string;
+  onSort: (column: string, dir: string) => void;
+}
+
+export function ProjectsTable({ projects, orderBy, sortDir, onSort }: ProjectsTableProps) {
   const router = useRouter();
   const deleteProject = useDeleteProject();
   const [deleteTarget, setDeleteTarget] = useState<ProjectWithRole | null>(null);
@@ -59,9 +67,21 @@ export function ProjectsTable({ projects }: { projects: ProjectWithRole[] }) {
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Name</TableHead>
+            <SortableHeader
+              label="Name"
+              column="name"
+              currentOrderBy={orderBy}
+              currentSortDir={sortDir}
+              onSort={onSort}
+            />
             <TableHead>Role</TableHead>
-            <TableHead>Created</TableHead>
+            <SortableHeader
+              label="Created"
+              column="createdAt"
+              currentOrderBy={orderBy}
+              currentSortDir={sortDir}
+              onSort={onSort}
+            />
             <TableHead className="w-12" />
           </TableRow>
         </TableHeader>

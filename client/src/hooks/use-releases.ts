@@ -16,6 +16,9 @@ interface ReleaseQueryParams {
   page?: number;
   limit?: number;
   status?: string;
+  search?: string;
+  orderBy?: string;
+  sortDir?: string;
 }
 
 export const releaseKeys = {
@@ -32,6 +35,9 @@ export function useReleases(projectId: string, params: ReleaseQueryParams = {}) 
   if (params.page) searchParams.set('page', String(params.page));
   if (params.limit) searchParams.set('limit', String(params.limit));
   if (params.status) searchParams.set('status', params.status);
+  if (params.search) searchParams.set('search', params.search);
+  if (params.orderBy) searchParams.set('orderBy', params.orderBy);
+  if (params.sortDir) searchParams.set('sortDir', params.sortDir);
 
   const query = searchParams.toString();
   const url = `/projects/${projectId}/releases${query ? `?${query}` : ''}`;
