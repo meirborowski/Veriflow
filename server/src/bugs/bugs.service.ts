@@ -264,30 +264,44 @@ export class BugsService {
 
     this.logger.log(`Bug updated: id=${bugId}`);
 
-    // Notify assignee when assigned
+    // Notify assignee when assigned (best-effort)
     if (dto.assignedToId && dto.assignedToId !== previousAssignedToId) {
-      const notification = await this.notificationsService.create({
-        userId: dto.assignedToId,
-        type: NotificationType.BUG_ASSIGNED,
-        title: 'Bug assigned to you',
-        message: `You have been assigned to bug: ${bug.title}`,
-        relatedEntityType: 'bug',
-        relatedEntityId: bugId,
-      });
-      this.notificationsGateway.notifyUser(dto.assignedToId, notification);
+      try {
+        const notification = await this.notificationsService.create({
+          userId: dto.assignedToId,
+          type: NotificationType.BUG_ASSIGNED,
+          title: 'Bug assigned to you',
+          message: `You have been assigned to bug: ${bug.title}`,
+          relatedEntityType: 'bug',
+          relatedEntityId: bugId,
+        });
+        this.notificationsGateway.notifyUser(dto.assignedToId, notification);
+      } catch (error) {
+        this.logger.error(
+          `Failed to send BUG_ASSIGNED notification for bug ${bugId}`,
+          error instanceof Error ? error.stack : String(error),
+        );
+      }
     }
 
-    // Notify reporter when status changes
+    // Notify reporter when status changes (best-effort)
     if (dto.status && dto.status !== previousStatus) {
-      const notification = await this.notificationsService.create({
-        userId: bug.reportedById,
-        type: NotificationType.BUG_STATUS_CHANGED,
-        title: 'Bug status changed',
-        message: `Bug "${bug.title}" status changed to ${dto.status}`,
-        relatedEntityType: 'bug',
-        relatedEntityId: bugId,
-      });
-      this.notificationsGateway.notifyUser(bug.reportedById, notification);
+      try {
+        const notification = await this.notificationsService.create({
+          userId: bug.reportedById,
+          type: NotificationType.BUG_STATUS_CHANGED,
+          title: 'Bug status changed',
+          message: `Bug "${bug.title}" status changed to ${dto.status}`,
+          relatedEntityType: 'bug',
+          relatedEntityId: bugId,
+        });
+        this.notificationsGateway.notifyUser(bug.reportedById, notification);
+      } catch (error) {
+        this.logger.error(
+          `Failed to send BUG_STATUS_CHANGED notification for bug ${bugId}`,
+          error instanceof Error ? error.stack : String(error),
+        );
+      }
     }
 
     return this.findOne(bugId);

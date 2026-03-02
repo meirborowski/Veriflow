@@ -301,22 +301,31 @@ export class ReleasesService {
       `Release closed: id=${releaseId}, project=${result.projectId}, stories=${result.storyCount}`,
     );
 
-    // Notify all project members
-    const members = await this.memberRepository.find({
-      where: { projectId: result.projectId },
-      select: ['userId'],
-    });
-
-    for (const member of members) {
-      const notification = await this.notificationsService.create({
-        userId: member.userId,
-        type: NotificationType.RELEASE_CLOSED,
-        title: 'Release closed',
-        message: `Release "${result.name}" has been closed with ${result.storyCount} stories`,
-        relatedEntityType: 'release',
-        relatedEntityId: releaseId,
+    // Notify all project members (best-effort, parallel)
+    try {
+      const members = await this.memberRepository.find({
+        where: { projectId: result.projectId },
+        select: ['userId'],
       });
-      this.notificationsGateway.notifyUser(member.userId, notification);
+
+      await Promise.allSettled(
+        members.map(async (member) => {
+          const notification = await this.notificationsService.create({
+            userId: member.userId,
+            type: NotificationType.RELEASE_CLOSED,
+            title: 'Release closed',
+            message: `Release "${result.name}" has been closed with ${result.storyCount} stories`,
+            relatedEntityType: 'release',
+            relatedEntityId: releaseId,
+          });
+          this.notificationsGateway.notifyUser(member.userId, notification);
+        }),
+      );
+    } catch (error) {
+      this.logger.error(
+        `Failed to send RELEASE_CLOSED notifications for release ${releaseId}`,
+        error instanceof Error ? error.stack : String(error),
+      );
     }
 
     return {
