@@ -7,10 +7,9 @@ import PDFDocument from 'pdfkit';
 import { Release } from '../releases/entities/release.entity';
 import { ReleaseStory } from '../releases/entities/release-story.entity';
 import { TestExecution } from '../test-execution/entities/test-execution.entity';
-import { StepResult } from '../test-execution/entities/step-result.entity';
 import { Bug } from '../bugs/entities/bug.entity';
 import { ReleaseStatus } from '../common/types/enums';
-import type { BugQueryDto } from '../bugs/dto/bug-query.dto';
+import type { BugExportQueryDto } from './dto/bug-export-query.dto';
 
 interface ReleaseReportRow {
   storyTitle: string;
@@ -34,6 +33,22 @@ interface BugExportRow {
   description: string;
 }
 
+function sanitizeCsvValue(value: string | number): string | number {
+  if (typeof value !== 'string') return value;
+  if (/^[=+\-@\t\r]/.test(value)) return `'${value}`;
+  return value;
+}
+
+function sanitizeCsvRow(
+  row: Record<string, string | number>,
+): Record<string, string | number> {
+  const sanitized: Record<string, string | number> = {};
+  for (const [key, val] of Object.entries(row)) {
+    sanitized[key] = sanitizeCsvValue(val);
+  }
+  return sanitized;
+}
+
 @Injectable()
 export class ExportService {
   constructor(
@@ -43,8 +58,6 @@ export class ExportService {
     private readonly releaseStoryRepository: Repository<ReleaseStory>,
     @InjectRepository(TestExecution)
     private readonly executionRepository: Repository<TestExecution>,
-    @InjectRepository(StepResult)
-    private readonly stepResultRepository: Repository<StepResult>,
     @InjectRepository(Bug)
     private readonly bugRepository: Repository<Bug>,
   ) {}
@@ -57,18 +70,21 @@ export class ExportService {
 
     csvStream.on('data', (chunk: Buffer) => readable.push(chunk));
     csvStream.on('end', () => readable.push(null));
+    csvStream.on('error', (err: Error) => readable.destroy(err));
 
     for (const row of rows) {
-      csvStream.write({
-        'Story Title': row.storyTitle,
-        Priority: row.priority,
-        'Test Status': row.testStatus,
-        Tester: row.tester,
-        Attempt: row.attempt,
-        'Step Instruction': row.stepInstruction,
-        'Step Result': row.stepResult,
-        'Step Comment': row.stepComment,
-      });
+      csvStream.write(
+        sanitizeCsvRow({
+          'Story Title': row.storyTitle,
+          Priority: row.priority,
+          'Test Status': row.testStatus,
+          Tester: row.tester,
+          Attempt: row.attempt,
+          'Step Instruction': row.stepInstruction,
+          'Step Result': row.stepResult,
+          'Step Comment': row.stepComment,
+        }),
+      );
     }
 
     csvStream.end();
@@ -186,7 +202,7 @@ export class ExportService {
 
   async generateBugExportCsv(
     projectId: string,
-    filters?: BugQueryDto,
+    filters?: BugExportQueryDto,
   ): Promise<Readable> {
     const rows = await this.getBugExportData(projectId, filters);
 
@@ -195,18 +211,21 @@ export class ExportService {
 
     csvStream.on('data', (chunk: Buffer) => readable.push(chunk));
     csvStream.on('end', () => readable.push(null));
+    csvStream.on('error', (err: Error) => readable.destroy(err));
 
     for (const row of rows) {
-      csvStream.write({
-        Title: row.title,
-        Severity: row.severity,
-        Status: row.status,
-        'Story Title': row.storyTitle,
-        'Reported By': row.reportedBy,
-        'Assigned To': row.assignedTo,
-        'Created At': row.createdAt,
-        Description: row.description,
-      });
+      csvStream.write(
+        sanitizeCsvRow({
+          Title: row.title,
+          Severity: row.severity,
+          Status: row.status,
+          'Story Title': row.storyTitle,
+          'Reported By': row.reportedBy,
+          'Assigned To': row.assignedTo,
+          'Created At': row.createdAt,
+          Description: row.description,
+        }),
+      );
     }
 
     csvStream.end();
@@ -215,7 +234,7 @@ export class ExportService {
 
   async generateBugExportPdf(
     projectId: string,
-    filters?: BugQueryDto,
+    filters?: BugExportQueryDto,
   ): Promise<Readable> {
     const rows = await this.getBugExportData(projectId, filters);
 
@@ -372,7 +391,7 @@ export class ExportService {
 
   private async getBugExportData(
     projectId: string,
-    filters?: BugQueryDto,
+    filters?: BugExportQueryDto,
   ): Promise<BugExportRow[]> {
     const qb = this.bugRepository
       .createQueryBuilder('bug')

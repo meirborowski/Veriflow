@@ -5,7 +5,6 @@ import { ExportService } from './export.service';
 import { Release } from '../releases/entities/release.entity';
 import { ReleaseStory } from '../releases/entities/release-story.entity';
 import { TestExecution } from '../test-execution/entities/test-execution.entity';
-import { StepResult } from '../test-execution/entities/step-result.entity';
 import { Bug } from '../bugs/entities/bug.entity';
 import {
   ReleaseStatus,
@@ -39,8 +38,6 @@ describe('ExportService', () => {
     createQueryBuilder: jest.fn().mockReturnValue(mockExecutionQb),
   };
 
-  const mockStepResultRepo = {};
-
   const mockBugQb = {
     innerJoinAndSelect: jest.fn().mockReturnThis(),
     leftJoinAndSelect: jest.fn().mockReturnThis(),
@@ -66,10 +63,6 @@ describe('ExportService', () => {
         {
           provide: getRepositoryToken(TestExecution),
           useValue: mockExecutionRepo,
-        },
-        {
-          provide: getRepositoryToken(StepResult),
-          useValue: mockStepResultRepo,
         },
         { provide: getRepositoryToken(Bug), useValue: mockBugRepo },
       ],

@@ -2,17 +2,31 @@
 
 import { useState } from 'react';
 import { toast } from 'sonner';
-import { getAccessToken } from '@/lib/api';
+import { getAccessToken, refreshAndGetToken } from '@/lib/api';
 
 const BASE_URL =
   process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
 
-async function downloadFile(url: string, filename: string): Promise<void> {
+async function authenticatedFetch(url: string): Promise<Response> {
   const token = getAccessToken();
-
   const res = await fetch(`${BASE_URL}${url}`, {
     headers: token ? { Authorization: `Bearer ${token}` } : {},
   });
+
+  if (res.status === 401) {
+    const newToken = await refreshAndGetToken();
+    if (newToken) {
+      return fetch(`${BASE_URL}${url}`, {
+        headers: { Authorization: `Bearer ${newToken}` },
+      });
+    }
+  }
+
+  return res;
+}
+
+async function downloadFile(url: string, filename: string): Promise<void> {
+  const res = await authenticatedFetch(url);
 
   if (!res.ok) {
     const error = await res.json().catch(() => ({ message: 'Export failed' }));

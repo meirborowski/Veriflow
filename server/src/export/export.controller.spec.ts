@@ -84,14 +84,9 @@ describe('ExportController', () => {
       const mockStream = createMockStream();
       mockService.generateBugExportCsv.mockResolvedValue(mockStream);
       const res = createMockResponse();
-      const query = { page: 1, limit: 20 };
+      const query = { format: 'csv' };
 
-      await controller.exportBugs(
-        'proj-1',
-        'csv',
-        query as never,
-        res as never,
-      );
+      await controller.exportBugs('proj-1', query as never, res as never);
 
       expect(mockService.generateBugExportCsv).toHaveBeenCalledWith(
         'proj-1',
@@ -106,14 +101,9 @@ describe('ExportController', () => {
       const mockStream = createMockStream();
       mockService.generateBugExportPdf.mockResolvedValue(mockStream);
       const res = createMockResponse();
-      const query = { page: 1, limit: 20 };
+      const query = { format: 'pdf' };
 
-      await controller.exportBugs(
-        'proj-1',
-        'pdf',
-        query as never,
-        res as never,
-      );
+      await controller.exportBugs('proj-1', query as never, res as never);
 
       expect(mockService.generateBugExportPdf).toHaveBeenCalledWith(
         'proj-1',
@@ -128,7 +118,11 @@ describe('ExportController', () => {
       const res = createMockResponse();
 
       await expect(
-        controller.exportBugs('proj-1', 'txt', {} as never, res as never),
+        controller.exportBugs(
+          'proj-1',
+          { format: 'txt' } as never,
+          res as never,
+        ),
       ).rejects.toThrow(BadRequestException);
     });
   });
