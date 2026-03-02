@@ -1,6 +1,6 @@
 'use client';
 
-import { use, useState, useEffect } from 'react';
+import { use, useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import { FileText, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -16,29 +16,35 @@ import { Breadcrumbs } from '@/components/breadcrumbs';
 import { Pagination } from '@/components/pagination';
 import { useProject } from '@/hooks/use-projects';
 import { useStories } from '@/hooks/use-user-stories';
+import { useUrlFilters } from '@/hooks/use-url-filters';
 import { Priority, StoryStatus } from '@/types/user-stories';
 import { StoriesTable } from './_components/stories-table';
 import { StoriesTableSkeleton } from './_components/stories-table-skeleton';
 
 const PAGE_SIZE = 20;
 
-export default function StoriesPage({
-  params,
+function StoriesPageContent({
+  projectId,
 }: {
-  params: Promise<{ projectId: string }>;
+  projectId: string;
 }) {
-  const { projectId } = use(params);
   const { data: project } = useProject(projectId);
-  const [page, setPage] = useState(1);
-  const [status, setStatus] = useState<string>('');
-  const [priority, setPriority] = useState<string>('');
-  const [search, setSearch] = useState('');
-  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const { get, getNumber, set, setPage } = useUrlFilters();
+  const page = getNumber('page', 1);
+  const status = get('status');
+  const priority = get('priority');
+  const orderBy = get('orderBy');
+  const sortDir = get('sortDir');
+
+  const [search, setSearch] = useState(get('search'));
+  const [debouncedSearch, setDebouncedSearch] = useState(get('search'));
 
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearch(search);
-      setPage(1);
+      if (search !== get('search')) {
+        set({ search: search || null });
+      }
     }, 300);
     return () => clearTimeout(timer);
   }, [search]);
@@ -49,7 +55,13 @@ export default function StoriesPage({
     status: status || undefined,
     priority: priority || undefined,
     search: debouncedSearch || undefined,
+    orderBy: orderBy || undefined,
+    sortDir: sortDir || undefined,
   });
+
+  function handleSort(column: string, dir: string) {
+    set({ orderBy: column || null, sortDir: dir || null });
+  }
 
   return (
     <div className="max-w-6xl">
@@ -79,10 +91,9 @@ export default function StoriesPage({
           className="max-w-xs"
         />
         <Select
-          value={status}
+          value={status || 'ALL'}
           onValueChange={(value) => {
-            setStatus(value === 'ALL' ? '' : value);
-            setPage(1);
+            set({ status: value === 'ALL' ? null : value });
           }}
         >
           <SelectTrigger className="w-[140px]">
@@ -98,10 +109,9 @@ export default function StoriesPage({
           </SelectContent>
         </Select>
         <Select
-          value={priority}
+          value={priority || 'ALL'}
           onValueChange={(value) => {
-            setPriority(value === 'ALL' ? '' : value);
-            setPage(1);
+            set({ priority: value === 'ALL' ? null : value });
           }}
         >
           <SelectTrigger className="w-[140px]">
@@ -137,7 +147,13 @@ export default function StoriesPage({
           </div>
         ) : data && data.data.length > 0 ? (
           <>
-            <StoriesTable stories={data.data} projectId={projectId} />
+            <StoriesTable
+              stories={data.data}
+              projectId={projectId}
+              orderBy={orderBy}
+              sortDir={sortDir}
+              onSort={handleSort}
+            />
             {data.meta.totalPages > 1 && (
               <div className="mt-4">
                 <Pagination
@@ -161,5 +177,18 @@ export default function StoriesPage({
         )}
       </div>
     </div>
+  );
+}
+
+export default function StoriesPage({
+  params,
+}: {
+  params: Promise<{ projectId: string }>;
+}) {
+  const { projectId } = use(params);
+  return (
+    <Suspense fallback={<StoriesTableSkeleton />}>
+      <StoriesPageContent projectId={projectId} />
+    </Suspense>
   );
 }

@@ -27,6 +27,7 @@ describe('ProjectsService', () => {
     save: jest.fn(),
     findOne: jest.fn(),
     findAndCount: jest.fn(),
+    createQueryBuilder: jest.fn(),
     count: jest.fn(),
     remove: jest.fn(),
   };
@@ -95,21 +96,50 @@ describe('ProjectsService', () => {
   });
 
   describe('findAllForUser', () => {
+    function setupQueryBuilderMocks(rawData: unknown[], total: number) {
+      const mockQb = {
+        select: jest.fn().mockReturnThis(),
+        innerJoin: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        orderBy: jest.fn().mockReturnThis(),
+        offset: jest.fn().mockReturnThis(),
+        limit: jest.fn().mockReturnThis(),
+        getRawMany: jest.fn().mockResolvedValue(rawData),
+      };
+
+      const mockCountQb = {
+        innerJoin: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        getCount: jest.fn().mockResolvedValue(total),
+      };
+
+      mockMemberRepo.createQueryBuilder
+        .mockReturnValueOnce(mockQb)
+        .mockReturnValueOnce(mockCountQb);
+
+      return { mockQb, mockCountQb };
+    }
+
     it('should return paginated projects with roles', async () => {
-      const members = [
-        {
-          role: UserRole.ADMIN,
-          project: {
+      setupQueryBuilderMocks(
+        [
+          {
             id: 'proj-1',
             name: 'P1',
             description: null,
+            role: UserRole.ADMIN,
             createdAt: new Date(),
           },
-        },
-      ];
-      mockMemberRepo.findAndCount.mockResolvedValue([members, 1]);
+        ],
+        1,
+      );
 
-      const result = await service.findAllForUser('user-1', 1, 20);
+      const result = await service.findAllForUser('user-1', {
+        page: 1,
+        limit: 20,
+      });
       expect(result.data).toHaveLength(1);
       expect(result.data[0].role).toBe(UserRole.ADMIN);
       expect(result.meta.total).toBe(1);
@@ -117,18 +147,52 @@ describe('ProjectsService', () => {
     });
 
     it('should return empty data when user has no projects', async () => {
-      mockMemberRepo.findAndCount.mockResolvedValue([[], 0]);
+      setupQueryBuilderMocks([], 0);
 
-      const result = await service.findAllForUser('user-1', 1, 20);
+      const result = await service.findAllForUser('user-1', {
+        page: 1,
+        limit: 20,
+      });
       expect(result.data).toHaveLength(0);
       expect(result.meta.total).toBe(0);
     });
 
     it('should calculate correct totalPages', async () => {
-      mockMemberRepo.findAndCount.mockResolvedValue([[], 45]);
+      setupQueryBuilderMocks([], 45);
 
-      const result = await service.findAllForUser('user-1', 1, 20);
+      const result = await service.findAllForUser('user-1', {
+        page: 1,
+        limit: 20,
+      });
       expect(result.meta.totalPages).toBe(3);
+    });
+
+    it('should apply search filter on project name', async () => {
+      const { mockQb } = setupQueryBuilderMocks([], 0);
+
+      await service.findAllForUser('user-1', {
+        page: 1,
+        limit: 20,
+        search: 'test',
+      });
+
+      expect(mockQb.andWhere).toHaveBeenCalledWith(
+        'project.name ILIKE :search',
+        { search: '%test%' },
+      );
+    });
+
+    it('should apply dynamic sort order', async () => {
+      const { mockQb } = setupQueryBuilderMocks([], 0);
+
+      await service.findAllForUser('user-1', {
+        page: 1,
+        limit: 20,
+        orderBy: 'name',
+        sortDir: 'ASC',
+      });
+
+      expect(mockQb.orderBy).toHaveBeenCalledWith('project.name', 'ASC');
     });
   });
 

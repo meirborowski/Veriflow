@@ -60,8 +60,7 @@ describe('ProjectsController', () => {
       expect(result).toEqual(response);
       expect(mockProjectsService.findAllForUser).toHaveBeenCalledWith(
         'user-1',
-        1,
-        20,
+        { page: 1, limit: 20 },
       );
     });
   });

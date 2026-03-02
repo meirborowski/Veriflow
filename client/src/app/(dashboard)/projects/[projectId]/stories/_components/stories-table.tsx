@@ -12,6 +12,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { SortableHeader } from '@/components/sortable-header';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -46,9 +47,12 @@ function formatDate(dateString: string): string {
 interface StoriesTableProps {
   stories: StoryListItem[];
   projectId: string;
+  orderBy: string;
+  sortDir: string;
+  onSort: (column: string, dir: string) => void;
 }
 
-export function StoriesTable({ stories, projectId }: StoriesTableProps) {
+export function StoriesTable({ stories, projectId, orderBy, sortDir, onSort }: StoriesTableProps) {
   const router = useRouter();
   const deleteStory = useDeleteStory();
   const [deleteTarget, setDeleteTarget] = useState<StoryListItem | null>(null);
@@ -65,11 +69,11 @@ export function StoriesTable({ stories, projectId }: StoriesTableProps) {
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Title</TableHead>
-            <TableHead>Priority</TableHead>
-            <TableHead>Status</TableHead>
+            <SortableHeader label="Title" column="title" currentOrderBy={orderBy} currentSortDir={sortDir} onSort={onSort} />
+            <SortableHeader label="Priority" column="priority" currentOrderBy={orderBy} currentSortDir={sortDir} onSort={onSort} />
+            <SortableHeader label="Status" column="status" currentOrderBy={orderBy} currentSortDir={sortDir} onSort={onSort} />
             <TableHead>Steps</TableHead>
-            <TableHead>Created</TableHead>
+            <SortableHeader label="Created" column="createdAt" currentOrderBy={orderBy} currentSortDir={sortDir} onSort={onSort} />
             <TableHead className="w-12" />
           </TableRow>
         </TableHeader>

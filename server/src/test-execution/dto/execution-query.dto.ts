@@ -1,5 +1,13 @@
 import { Type } from 'class-transformer';
-import { IsEnum, IsOptional, IsInt, IsUUID, Min, Max } from 'class-validator';
+import {
+  IsEnum,
+  IsOptional,
+  IsInt,
+  IsUUID,
+  IsIn,
+  Min,
+  Max,
+} from 'class-validator';
 import { TestStatus } from '../../common/types/enums';
 
 export class ExecutionQueryDto {
@@ -23,4 +31,12 @@ export class ExecutionQueryDto {
   @IsOptional()
   @IsEnum(TestStatus)
   status?: TestStatus;
+
+  @IsOptional()
+  @IsIn(['startedAt', 'status', 'attempt'])
+  orderBy?: string;
+
+  @IsOptional()
+  @IsIn(['ASC', 'DESC'])
+  sortDir?: 'ASC' | 'DESC';
 }

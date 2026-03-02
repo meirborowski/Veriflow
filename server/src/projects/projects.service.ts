@@ -16,6 +16,7 @@ import { CreateProjectDto } from './dto/create-project.dto';
 import { UpdateProjectDto } from './dto/update-project.dto';
 import { AddMemberDto } from './dto/add-member.dto';
 import { UpdateMemberRoleDto } from './dto/update-member-role.dto';
+import type { ProjectQueryDto } from './dto/project-query.dto';
 import type { PaginatedResponse } from '../common/types/pagination';
 
 export interface ProjectWithRole {
@@ -77,32 +78,59 @@ export class ProjectsService {
 
   async findAllForUser(
     userId: string,
-    page: number,
-    limit: number,
+    query: ProjectQueryDto,
   ): Promise<PaginatedResponse<ProjectWithRole>> {
-    const [members, total] = await this.memberRepository.findAndCount({
-      where: { userId },
-      relations: ['project'],
-      order: { project: { createdAt: 'DESC' } },
-      skip: (page - 1) * limit,
-      take: limit,
-    });
+    const qb = this.memberRepository
+      .createQueryBuilder('member')
+      .select([
+        'project.id AS id',
+        'project.name AS name',
+        'project.description AS description',
+        'member.role AS role',
+        'project.createdAt AS "createdAt"',
+      ])
+      .innerJoin('projects', 'project', 'project.id = member.projectId')
+      .where('member.userId = :userId', { userId });
 
-    const data: ProjectWithRole[] = members.map((m) => ({
-      id: m.project.id,
-      name: m.project.name,
-      description: m.project.description,
-      role: m.role,
-      createdAt: m.project.createdAt,
-    }));
+    if (query.search) {
+      qb.andWhere('project.name ILIKE :search', {
+        search: `%${query.search}%`,
+      });
+    }
+
+    const countQb = this.memberRepository
+      .createQueryBuilder('member')
+      .innerJoin('projects', 'project', 'project.id = member.projectId')
+      .where('member.userId = :userId', { userId });
+
+    if (query.search) {
+      countQb.andWhere('project.name ILIKE :search', {
+        search: `%${query.search}%`,
+      });
+    }
+
+    const total = await countQb.getCount();
+
+    const allowedSort: Record<string, string> = {
+      createdAt: 'project.createdAt',
+      name: 'project.name',
+    };
+    const sortColumn = allowedSort[query.orderBy ?? ''] ?? 'project.createdAt';
+    const sortDir = query.sortDir === 'ASC' ? 'ASC' : 'DESC';
+
+    const data = await qb
+      .orderBy(sortColumn, sortDir)
+      .offset((query.page - 1) * query.limit)
+      .limit(query.limit)
+      .getRawMany<ProjectWithRole>();
 
     return {
       data,
       meta: {
         total,
-        page,
-        limit,
-        totalPages: Math.ceil(total / limit),
+        page: query.page,
+        limit: query.limit,
+        totalPages: Math.ceil(total / query.limit),
       },
     };
   }

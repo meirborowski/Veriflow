@@ -392,8 +392,16 @@ export class TestExecutionService implements OnModuleInit {
 
     const total = await countQb.getCount();
 
+    const allowedSort: Record<string, string> = {
+      startedAt: 'te.startedAt',
+      status: 'te.status',
+      attempt: 'te.attempt',
+    };
+    const sortColumn = allowedSort[query.orderBy ?? ''] ?? 'te.startedAt';
+    const sortDir = query.sortDir === 'ASC' ? 'ASC' : 'DESC';
+
     const data = await qb
-      .orderBy('te.startedAt', 'DESC')
+      .orderBy(sortColumn, sortDir)
       .offset((query.page - 1) * query.limit)
       .limit(query.limit)
       .getRawMany<ExecutionListItem>();

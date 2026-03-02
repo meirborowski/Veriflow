@@ -106,8 +106,17 @@ export class UserStoriesService {
 
     const total = await countQb.getCount();
 
+    const allowedSort: Record<string, string> = {
+      createdAt: 'story.createdAt',
+      title: 'story.title',
+      priority: 'story.priority',
+      status: 'story.status',
+    };
+    const sortColumn = allowedSort[query.orderBy ?? ''] ?? 'story.createdAt';
+    const sortDir = query.sortDir === 'ASC' ? 'ASC' : 'DESC';
+
     const data = await qb
-      .orderBy('story.createdAt', 'DESC')
+      .orderBy(sortColumn, sortDir)
       .offset((query.page - 1) * query.limit)
       .limit(query.limit)
       .getRawMany<StoryListItem>();

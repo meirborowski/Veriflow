@@ -1,4 +1,4 @@
-import { IsEnum, IsOptional, IsString } from 'class-validator';
+import { IsEnum, IsOptional, IsString, IsIn } from 'class-validator';
 import { Type } from 'class-transformer';
 import { IsInt, Max, Min } from 'class-validator';
 import { Priority, StoryStatus } from '../../common/types/enums';
@@ -28,4 +28,12 @@ export class StoryQueryDto {
   @IsOptional()
   @IsString()
   search?: string;
+
+  @IsOptional()
+  @IsIn(['createdAt', 'title', 'priority', 'status'])
+  orderBy?: string;
+
+  @IsOptional()
+  @IsIn(['ASC', 'DESC'])
+  sortDir?: 'ASC' | 'DESC';
 }

@@ -1,10 +1,11 @@
 'use client';
 
-import { use, useState } from 'react';
+import { use, useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Bug as BugIcon, MoreHorizontal, Eye, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import {
   Select,
   SelectContent,
@@ -40,10 +41,12 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import { Breadcrumbs } from '@/components/breadcrumbs';
 import { Pagination } from '@/components/pagination';
+import { SortableHeader } from '@/components/sortable-header';
 import { BugSeverityBadge } from '@/components/bug-severity-badge';
 import { BugStatusBadge } from '@/components/bug-status-badge';
 import { useProject } from '@/hooks/use-projects';
 import { useBugs, useDeleteBug } from '@/hooks/use-bugs';
+import { useUrlFilters } from '@/hooks/use-url-filters';
 import { BugSeverity, BugStatus } from '@/types/bugs';
 import type { BugListItem } from '@/types/bugs';
 
@@ -93,9 +96,15 @@ function BugsTableSkeleton() {
 function BugsTable({
   bugs,
   projectId,
+  orderBy,
+  sortDir,
+  onSort,
 }: {
   bugs: BugListItem[];
   projectId: string;
+  orderBy: string;
+  sortDir: string;
+  onSort: (column: string, dir: string) => void;
 }) {
   const router = useRouter();
   const deleteBug = useDeleteBug(projectId);
@@ -113,13 +122,13 @@ function BugsTable({
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Title</TableHead>
-            <TableHead>Severity</TableHead>
-            <TableHead>Status</TableHead>
+            <SortableHeader label="Title" column="title" currentOrderBy={orderBy} currentSortDir={sortDir} onSort={onSort} />
+            <SortableHeader label="Severity" column="severity" currentOrderBy={orderBy} currentSortDir={sortDir} onSort={onSort} />
+            <SortableHeader label="Status" column="status" currentOrderBy={orderBy} currentSortDir={sortDir} onSort={onSort} />
             <TableHead>Story</TableHead>
             <TableHead>Reporter</TableHead>
             <TableHead>Assignee</TableHead>
-            <TableHead>Created</TableHead>
+            <SortableHeader label="Created" column="createdAt" currentOrderBy={orderBy} currentSortDir={sortDir} onSort={onSort} />
             <TableHead className="w-12" />
           </TableRow>
         </TableHeader>
@@ -216,23 +225,45 @@ function BugsTable({
   );
 }
 
-export default function BugsPage({
-  params,
+function BugsPageContent({
+  projectId,
 }: {
-  params: Promise<{ projectId: string }>;
+  projectId: string;
 }) {
-  const { projectId } = use(params);
   const { data: project } = useProject(projectId);
-  const [page, setPage] = useState(1);
-  const [status, setStatus] = useState('');
-  const [severity, setSeverity] = useState('');
+  const { get, getNumber, set, setPage } = useUrlFilters();
+  const page = getNumber('page', 1);
+  const status = get('status');
+  const severity = get('severity');
+  const orderBy = get('orderBy');
+  const sortDir = get('sortDir');
+
+  const [search, setSearchValue] = useState(get('search'));
+  const [debouncedSearch, setDebouncedSearch] = useState(get('search'));
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+      if (search !== get('search')) {
+        set({ search: search || null });
+      }
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [search]);
 
   const { data, isLoading, isError, refetch } = useBugs(projectId, {
     page,
     limit: PAGE_SIZE,
     status: (status || undefined) as BugStatus | undefined,
     severity: (severity || undefined) as BugSeverity | undefined,
+    search: debouncedSearch || undefined,
+    orderBy: orderBy || undefined,
+    sortDir: sortDir || undefined,
   });
+
+  function handleSort(column: string, dir: string) {
+    set({ orderBy: column || null, sortDir: dir || null });
+  }
 
   return (
     <div className="max-w-6xl">
@@ -249,11 +280,16 @@ export default function BugsPage({
       </div>
 
       <div className="mt-4 flex items-center gap-3">
+        <Input
+          placeholder="Search bugs..."
+          value={search}
+          onChange={(e) => setSearchValue(e.target.value)}
+          className="max-w-xs"
+        />
         <Select
-          value={status}
+          value={status || 'ALL'}
           onValueChange={(value) => {
-            setStatus(value === 'ALL' ? '' : value);
-            setPage(1);
+            set({ status: value === 'ALL' ? null : value });
           }}
         >
           <SelectTrigger className="w-[150px]">
@@ -271,10 +307,9 @@ export default function BugsPage({
           </SelectContent>
         </Select>
         <Select
-          value={severity}
+          value={severity || 'ALL'}
           onValueChange={(value) => {
-            setSeverity(value === 'ALL' ? '' : value);
-            setPage(1);
+            set({ severity: value === 'ALL' ? null : value });
           }}
         >
           <SelectTrigger className="w-[150px]">
@@ -310,7 +345,13 @@ export default function BugsPage({
           </div>
         ) : data && data.data.length > 0 ? (
           <>
-            <BugsTable bugs={data.data} projectId={projectId} />
+            <BugsTable
+              bugs={data.data}
+              projectId={projectId}
+              orderBy={orderBy}
+              sortDir={sortDir}
+              onSort={handleSort}
+            />
             {data.meta.totalPages > 1 && (
               <div className="mt-4">
                 <Pagination
@@ -334,5 +375,18 @@ export default function BugsPage({
         )}
       </div>
     </div>
+  );
+}
+
+export default function BugsPage({
+  params,
+}: {
+  params: Promise<{ projectId: string }>;
+}) {
+  const { projectId } = use(params);
+  return (
+    <Suspense fallback={<BugsTableSkeleton />}>
+      <BugsPageContent projectId={projectId} />
+    </Suspense>
   );
 }

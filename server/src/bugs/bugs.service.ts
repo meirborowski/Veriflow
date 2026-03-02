@@ -181,8 +181,17 @@ export class BugsService {
 
     const total = await countQb.getCount();
 
+    const allowedSort: Record<string, string> = {
+      createdAt: 'bug.createdAt',
+      title: 'bug.title',
+      severity: 'bug.severity',
+      status: 'bug.status',
+    };
+    const sortColumn = allowedSort[query.orderBy ?? ''] ?? 'bug.createdAt';
+    const sortDir = query.sortDir === 'ASC' ? 'ASC' : 'DESC';
+
     const data = await qb
-      .orderBy('bug.createdAt', 'DESC')
+      .orderBy(sortColumn, sortDir)
       .offset((query.page - 1) * query.limit)
       .limit(query.limit)
       .getRawMany<BugListItem>();
@@ -263,6 +272,12 @@ export class BugsService {
     }
     if (query.storyId) {
       qb.andWhere('bug.storyId = :storyId', { storyId: query.storyId });
+    }
+    if (query.search) {
+      qb.andWhere(
+        '(bug.title ILIKE :search OR bug.description ILIKE :search)',
+        { search: `%${query.search}%` },
+      );
     }
   }
 }
