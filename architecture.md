@@ -52,10 +52,20 @@ docker compose up --build
   │     Volume: ./server → /app (hot-reload)
   │     CMD: npm run start:dev
   │
-  └── client (node:20.12.2-alpine)
-        Port 3000 │ Depends on: server
-        Volume: ./client → /app (hot-reload)
-        CMD: npm run dev
+  ├── client (node:20.12.2-alpine)
+  │     Port 3000 │ Depends on: server
+  │     Volume: ./client → /app (hot-reload)
+  │     CMD: npm run dev
+  │
+  ├── redis (redis:7-alpine)
+  │     Port 6379 │ Bull job queue backend
+  │     Health check: redis-cli ping
+  │
+  └── worker (mcr.microsoft.com/playwright)
+        No exposed port │ Depends on: redis (healthy), server
+        Playwright + browsers pre-installed
+        Bull queue consumer (processes test execution jobs)
+        CMD: npm run start
 ```
 
 Source directories are volume-mounted into containers. Anonymous volumes preserve container `node_modules` so host and container dependencies stay independent. Edit files on the host and changes are picked up automatically.
@@ -118,8 +128,11 @@ AppModule
   ├── TestExecutionModule
   │     └── depends on: AuthModule, ReleasesModule, BugsModule
   │
-  └── BugsModule
-        └── depends on: AuthModule, ProjectsModule, UserStoriesModule
+  ├── BugsModule
+  │     └── depends on: AuthModule, ProjectsModule, UserStoriesModule
+  │
+  └── AutomationModule
+        └── depends on: AuthModule, ProjectsModule, UserStoriesModule, ReleasesModule
 ```
 
 ### Shared / Common Module
@@ -172,6 +185,12 @@ client/app/
   │     │           ├── bugs/
   │     │           │     ├── page.tsx        → Bug list
   │     │           │     └── [bugId]/page.tsx → Bug detail
+  │     │           ├── automation/
+  │     │           │     ├── page.tsx        → Playwright test registry list
+  │     │           │     ├── [testId]/page.tsx → Test detail + run history
+  │     │           │     └── runs/
+  │     │           │           ├── page.tsx  → Automation runs list
+  │     │           │           └── [runId]/page.tsx → Run detail (logs, errors)
   │     │           └── settings/page.tsx     → Members, roles
   │     └── page.tsx                → Redirect to project list
   │
@@ -342,6 +361,21 @@ Client                          Server
                ┌──────────────┐
                │  StepResult  │
                └──────────────┘
+
+                        ┌────────────────┐
+         ┌──────────────│ PlaywrightTest │──────────────┐
+         │   N:N        │  (registry)    │   1:N        │
+         │              └────────────────┘              │
+         ▼                                              ▼
+  ┌──────────────┐                            ┌─────────────────┐
+  │StoryTestLink │                            │ AutomationRun   │
+  │ (join table) │                            │ (per execution) │
+  └──────┬───────┘                            └────────┬────────┘
+         │ N:1                                         │ N:1 (optional)
+         ▼                                             ▼
+  ┌──────────────┐                            ┌──────────────┐
+  │  UserStory   │                            │   Release    │
+  └──────────────┘                            └──────────────┘
 ```
 
 ### Enums
@@ -400,6 +434,30 @@ enum BugStatus {
   RESOLVED = 'RESOLVED',
   CLOSED = 'CLOSED',
   REOPENED = 'REOPENED',
+}
+
+enum AutomationRunStatus {
+  QUEUED = 'QUEUED',
+  CLONING = 'CLONING',
+  INSTALLING = 'INSTALLING',
+  RUNNING = 'RUNNING',
+  PASS = 'PASS',
+  FAIL = 'FAIL',
+  ERROR = 'ERROR',
+  SKIPPED = 'SKIPPED',
+  TIMEOUT = 'TIMEOUT',
+  CANCELLED = 'CANCELLED',
+}
+
+enum AutomationTrigger {
+  UI = 'UI',
+  CI_CD = 'CI_CD',
+  REGISTRY_SYNC = 'REGISTRY_SYNC',
+}
+
+enum LinkSource {
+  USER = 'USER',
+  AUTO_DISCOVERY = 'AUTO_DISCOVERY',
 }
 ```
 
@@ -510,3 +568,175 @@ This map is ephemeral — it lives only in server memory. If the server restarts
 ```
 
 `FOR UPDATE SKIP LOCKED` ensures no two testers get the same story, even under high concurrency.
+
+## 10. Playwright Automation Architecture
+
+### Test Registry & Linking Flow
+
+```
+External Project                Veriflow Server                  Database
+  │                               │                               │
+  ├── playwright test --list     │                               │
+  │   (CI step or CLI tool)      │                               │
+  │                               │                               │
+  ├── POST /automation/           │                               │
+  │   registry/sync ─────────────►│                               │
+  │   { tests: [...] }           │── Upsert PlaywrightTest rows ─►│
+  │                               │── Auto-link via storyIds ────►│
+  │                               │   (linkedBy = AUTO_DISCOVERY) │
+  │◄── { created, updated,      │                               │
+  │      linked } ───────────────│                               │
+```
+
+### CI/CD Result Reporting Flow
+
+```
+CI/CD Pipeline               Veriflow Server                  Database
+  │                               │                               │
+  ├── Run Playwright tests       │                               │
+  │                               │                               │
+  ├── POST /automation/runs ─────►│                               │
+  │   { triggeredBy: CI_CD,      │── Create AutomationRun rows ─►│
+  │     releaseId: uuid,         │── Match externalId → testId   │
+  │     results: [...] }         │── Compute conflict status     │
+  │                               │                               │
+  │◄── { recorded: N } ─────────│                               │
+```
+
+### Conflict Detection (Read-Time)
+
+```
+Client                          Server
+  │                               │
+  ├── GET /stories/:id/          │
+  │   automation/summary ────────►│
+  │                               │── Get linked tests for story
+  │                               │── Get latest AutomationRun per test
+  │                               │── Get latest manual TestExecution
+  │                               │── Compare: manual vs automation
+  │                               │── If disagree → conflict: true
+  │◄── { conflict: true,        │
+  │      manualStatus: PASS,     │
+  │      automationStatus: FAIL }│
+```
+
+### Test Execution Trigger Flow (UI)
+
+```
+User (Browser)           Veriflow API              Bull Queue (Redis)         Test Worker
+  │                        │                          │                          │
+  ├── POST /automation/    │                          │                          │
+  │   trigger ────────────►│                          │                          │
+  │   { testIds,           │── Create AutomationRun   │                          │
+  │     baseUrl,           │   (status: QUEUED)       │                          │
+  │     releaseId? }       │                          │                          │
+  │                        │── Enqueue job ──────────►│                          │
+  │◄── 202 { batchId,    │                          │                          │
+  │      runs: [...] }    │                          │                          │
+  │                        │                          │── Dequeue job ──────────►│
+  │                        │                          │                          │
+  │   (poll GET            │                          │   ┌── CLONING ──────────┤
+  │    /runs/:id/status)   │◄── Update status ────────│───┤   git clone repo    │
+  │◄── { CLONING } ──────│                          │   │                      │
+  │                        │                          │   ├── INSTALLING ───────┤
+  │◄── { INSTALLING } ───│◄── Update status ────────│───┤   npm ci             │
+  │                        │                          │   │                      │
+  │◄── { RUNNING } ──────│◄── Update status ────────│───┤── RUNNING ──────────┤
+  │                        │                          │   │   npx playwright    │
+  │                        │                          │   │   test --reporter   │
+  │                        │                          │   │   =json             │
+  │                        │                          │   │                      │
+  │◄── { PASS/FAIL,      │◄── Report results ───────│───┤── Parse JSON output │
+  │      duration,         │── Update AutomationRun   │   │── Report to API     │
+  │      logs } ──────────│── Compute conflicts       │   └── Cleanup workdir   │
+```
+
+### Tunnel Architecture (Local App Testing)
+
+```
+Developer Machine            Veriflow Tunnel Server          Test Worker
+  │                            │                               │
+  ├── veriflow tunnel          │                               │
+  │   --port 3000              │                               │
+  │   --project <id> ─────────►│                               │
+  │   --token <jwt>            │── Validate token              │
+  │                            │── Assign tunnel URL           │
+  │◄── Tunnel active ─────────│   https://abc.tunnel.veriflow │
+  │   (WSS connection held)    │                               │
+  │                            │                               │
+  │                            │◄── HTTP request (baseUrl) ────┤
+  │◄── Forward request ───────│   via tunnel URL               │  Playwright
+  │   localhost:3000           │                               │  navigates to
+  │── Response ───────────────►│── Forward response ──────────►│  tunnel URL
+  │                            │                               │
+  │   ✕ CLI exits              │                               │
+  │                            │── Invalidate tunnel URL       │
+```
+
+### Worker Service Architecture
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                    Test Worker Service                    │
+│                  (Docker container)                       │
+│                                                           │
+│  ┌──────────────┐  ┌──────────────┐  ┌────────────────┐ │
+│  │ Bull Queue   │  │  Git Clone   │  │  Playwright    │ │
+│  │ Consumer     │──│  + Cache     │──│  Runner        │ │
+│  │              │  │              │  │  (JSON output) │ │
+│  └──────────────┘  └──────────────┘  └───────┬────────┘ │
+│                                               │          │
+│                                    ┌──────────┴────────┐ │
+│                                    │  Result Reporter  │ │
+│                                    │  (POST to API)    │ │
+│                                    └───────────────────┘ │
+│                                                           │
+│  Pre-installed: Node.js 20, Playwright, Chromium,        │
+│                 Firefox, WebKit                           │
+└─────────────────────────────────────────────────────────┘
+```
+
+**Worker container specs**:
+- Base image: `mcr.microsoft.com/playwright:v1.x-noble`
+- Node.js 20 pre-installed
+- Git CLI for repo cloning
+- Max concurrent jobs: configurable (default: 2)
+- Job timeout: configurable (default: 10 minutes)
+- Repo cache: project-keyed, invalidated on branch/commit change
+
+### Infrastructure Dependencies
+
+```
+docker compose up --build
+  │
+  ├── db (postgres:16-alpine)
+  │     Port 5432
+  │
+  ├── redis (redis:7-alpine)
+  │     Port 6379 │ Used by Bull job queue
+  │
+  ├── server (veriflow API)
+  │     Port 3001 │ Depends on: db, redis
+  │     Bull producer (enqueues jobs)
+  │     Tunnel server (WSS endpoint)
+  │
+  ├── worker (veriflow test worker)
+  │     No exposed port │ Depends on: redis, server
+  │     Bull consumer (processes jobs)
+  │     Playwright + browsers pre-installed
+  │
+  └── client (Next.js)
+        Port 3000 │ Depends on: server
+```
+
+### Key Design Decisions
+- **Tests live externally** — Veriflow stores metadata only (file, name, tags), not test source code.
+- **Registry is push-based** — external projects push their catalog; Veriflow doesn't pull/scan repos.
+- **AutomationRun is append-only** — like TestExecution, every run is its own row.
+- **Conflicts are computed, not stored** — no separate conflict entity; derived at query time from latest results.
+- **Release-optional** — runs can target a specific release or be story-level only.
+- **Dedicated worker service** — test execution is isolated in a separate container, not on the API server.
+- **Git clone with caching** — worker clones repos on demand but caches for repeated runs against the same project.
+- **Bull (Redis) job queue** — reliable async job dispatch from API to worker with status tracking.
+- **Built-in tunnel** — WSS-based tunnel from developer's machine to test worker for local app testing.
+- **Poll-based status** — UI polls `GET /runs/:id/status` for progress updates (QUEUED → CLONING → RUNNING → PASS/FAIL).
