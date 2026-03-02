@@ -7,6 +7,7 @@ import PDFDocument from 'pdfkit';
 import { Release } from '../releases/entities/release.entity';
 import { ReleaseStory } from '../releases/entities/release-story.entity';
 import { TestExecution } from '../test-execution/entities/test-execution.entity';
+import type { StepResult } from '../test-execution/entities/step-result.entity';
 import { Bug } from '../bugs/entities/bug.entity';
 import { ReleaseStatus } from '../common/types/enums';
 import type { BugExportQueryDto } from './dto/bug-export-query.dto';
