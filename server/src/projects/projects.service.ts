@@ -5,19 +5,23 @@ import {
   ConflictException,
   BadRequestException,
   Logger,
+  Inject,
+  forwardRef,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Project } from './entities/project.entity';
 import { ProjectMember } from './entities/project-member.entity';
 import { User } from '../auth/entities/user.entity';
-import { UserRole } from '../common/types/enums';
+import { UserRole, NotificationType } from '../common/types/enums';
 import { CreateProjectDto } from './dto/create-project.dto';
 import { UpdateProjectDto } from './dto/update-project.dto';
 import { AddMemberDto } from './dto/add-member.dto';
 import { UpdateMemberRoleDto } from './dto/update-member-role.dto';
 import type { ProjectQueryDto } from './dto/project-query.dto';
 import type { PaginatedResponse } from '../common/types/pagination';
+import { NotificationsService } from '../notifications/notifications.service';
+import { NotificationsGateway } from '../notifications/notifications.gateway';
 
 export interface ProjectWithRole {
   id: string;
@@ -51,6 +55,10 @@ export class ProjectsService {
     private readonly memberRepository: Repository<ProjectMember>,
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
+    @Inject(forwardRef(() => NotificationsService))
+    private readonly notificationsService: NotificationsService,
+    @Inject(forwardRef(() => NotificationsGateway))
+    private readonly notificationsGateway: NotificationsGateway,
   ) {}
 
   async create(userId: string, dto: CreateProjectDto): Promise<Project> {
@@ -226,6 +234,24 @@ export class ProjectsService {
     this.logger.log(
       `Member added: project=${projectId}, user=${user.id}, role=${dto.role}`,
     );
+
+    // Notify the invited user
+    const project = await this.projectRepository.findOne({
+      where: { id: projectId },
+      select: ['id', 'name'],
+    });
+
+    if (project) {
+      const notification = await this.notificationsService.create({
+        userId: user.id,
+        type: NotificationType.MEMBER_ADDED,
+        title: 'Added to project',
+        message: `You have been added to project "${project.name}" as ${dto.role}`,
+        relatedEntityType: 'project',
+        relatedEntityId: projectId,
+      });
+      this.notificationsGateway.notifyUser(user.id, notification);
+    }
 
     return saved;
   }

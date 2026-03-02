@@ -11,7 +11,10 @@ import { Release } from './entities/release.entity';
 import { ReleaseStory } from './entities/release-story.entity';
 import { ReleaseStoryStep } from './entities/release-story-step.entity';
 import { UserStory } from '../user-stories/entities/user-story.entity';
+import { ProjectMember } from '../projects/entities/project-member.entity';
 import { ReleaseStatus, Priority, StoryStatus } from '../common/types/enums';
+import { NotificationsService } from '../notifications/notifications.service';
+import { NotificationsGateway } from '../notifications/notifications.gateway';
 
 describe('ReleasesService', () => {
   let service: ReleasesService;
@@ -30,6 +33,18 @@ describe('ReleasesService', () => {
 
   const mockStoryRepo = {
     find: jest.fn(),
+  };
+
+  const mockMemberRepo = {
+    find: jest.fn(),
+  };
+
+  const mockNotificationsService = {
+    create: jest.fn().mockResolvedValue({ id: 'notif-1' }),
+  };
+
+  const mockNotificationsGateway = {
+    notifyUser: jest.fn(),
   };
 
   const mockReleaseStoryRepoTx = {
@@ -73,7 +88,19 @@ describe('ReleasesService', () => {
           useValue: mockReleaseStoryRepo,
         },
         { provide: getRepositoryToken(UserStory), useValue: mockStoryRepo },
+        {
+          provide: getRepositoryToken(ProjectMember),
+          useValue: mockMemberRepo,
+        },
         { provide: DataSource, useValue: mockDataSource },
+        {
+          provide: NotificationsService,
+          useValue: mockNotificationsService,
+        },
+        {
+          provide: NotificationsGateway,
+          useValue: mockNotificationsGateway,
+        },
       ],
     }).compile();
 
@@ -480,6 +507,7 @@ describe('ReleasesService', () => {
       );
       mockReleaseStepRepoTx.save.mockResolvedValue([]);
       mockReleaseRepoTx.update.mockResolvedValue({});
+      mockMemberRepo.find.mockResolvedValue([]);
 
       const result = await service.close('release-1');
 
@@ -527,6 +555,56 @@ describe('ReleasesService', () => {
         status: ReleaseStatus.CLOSED,
         closedAt: expect.any(Date) as unknown as Date,
       });
+    });
+
+    it('should notify all project members when release is closed', async () => {
+      const release = {
+        id: 'release-1',
+        projectId: 'proj-1',
+        name: 'v1.0',
+        status: ReleaseStatus.DRAFT,
+        scopedStories: [
+          {
+            id: 'story-1',
+            title: 'Login',
+            description: 'Test login',
+            priority: Priority.HIGH,
+            steps: [{ id: 'step-1', order: 1, instruction: 'Click login' }],
+          },
+        ],
+      };
+
+      mockReleaseRepoTx.findOne.mockResolvedValue(release);
+      mockReleaseStoryRepoTx.create.mockImplementation(
+        (data: Record<string, unknown>) => data,
+      );
+      mockReleaseStoryRepoTx.save.mockResolvedValue({
+        id: 'rs-1',
+        releaseId: 'release-1',
+      });
+      mockReleaseStepRepoTx.create.mockImplementation(
+        (data: Record<string, unknown>) => data,
+      );
+      mockReleaseStepRepoTx.save.mockResolvedValue([]);
+      mockReleaseRepoTx.update.mockResolvedValue({});
+
+      mockMemberRepo.find.mockResolvedValue([
+        { userId: 'user-1' },
+        { userId: 'user-2' },
+      ]);
+
+      await service.close('release-1');
+
+      expect(mockNotificationsService.create).toHaveBeenCalledTimes(2);
+      expect(mockNotificationsService.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          userId: 'user-1',
+          type: 'RELEASE_CLOSED',
+          relatedEntityType: 'release',
+          relatedEntityId: 'release-1',
+        }),
+      );
+      expect(mockNotificationsGateway.notifyUser).toHaveBeenCalledTimes(2);
     });
 
     it('should throw BadRequestException when scope is empty', async () => {

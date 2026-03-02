@@ -11,6 +11,8 @@ import { Project } from './entities/project.entity';
 import { ProjectMember } from './entities/project-member.entity';
 import { User } from '../auth/entities/user.entity';
 import { UserRole } from '../common/types/enums';
+import { NotificationsService } from '../notifications/notifications.service';
+import { NotificationsGateway } from '../notifications/notifications.gateway';
 
 describe('ProjectsService', () => {
   let service: ProjectsService;
@@ -36,6 +38,14 @@ describe('ProjectsService', () => {
     findOne: jest.fn(),
   };
 
+  const mockNotificationsService = {
+    create: jest.fn().mockResolvedValue({ id: 'notif-1' }),
+  };
+
+  const mockNotificationsGateway = {
+    notifyUser: jest.fn(),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -46,6 +56,14 @@ describe('ProjectsService', () => {
           useValue: mockMemberRepo,
         },
         { provide: getRepositoryToken(User), useValue: mockUserRepo },
+        {
+          provide: NotificationsService,
+          useValue: mockNotificationsService,
+        },
+        {
+          provide: NotificationsGateway,
+          useValue: mockNotificationsGateway,
+        },
       ],
     }).compile();
 
@@ -296,12 +314,53 @@ describe('ProjectsService', () => {
       };
       mockMemberRepo.create.mockReturnValue(member);
       mockMemberRepo.save.mockResolvedValue(member);
+      mockProjectRepo.findOne.mockResolvedValue({
+        id: 'proj-1',
+        name: 'Test Project',
+      });
 
       const result = await service.addMember('proj-1', {
         email: 'dev@test.com',
         role: UserRole.DEVELOPER,
       });
       expect(result.role).toBe(UserRole.DEVELOPER);
+    });
+
+    it('should notify the invited user when added as member', async () => {
+      mockUserRepo.findOne.mockResolvedValue({
+        id: 'user-2',
+        email: 'dev@test.com',
+      });
+      mockMemberRepo.findOne.mockResolvedValue(null);
+      const member = {
+        userId: 'user-2',
+        projectId: 'proj-1',
+        role: UserRole.TESTER,
+      };
+      mockMemberRepo.create.mockReturnValue(member);
+      mockMemberRepo.save.mockResolvedValue(member);
+      mockProjectRepo.findOne.mockResolvedValue({
+        id: 'proj-1',
+        name: 'Test Project',
+      });
+
+      await service.addMember('proj-1', {
+        email: 'dev@test.com',
+        role: UserRole.TESTER,
+      });
+
+      expect(mockNotificationsService.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          userId: 'user-2',
+          type: 'MEMBER_ADDED',
+          relatedEntityType: 'project',
+          relatedEntityId: 'proj-1',
+        }),
+      );
+      expect(mockNotificationsGateway.notifyUser).toHaveBeenCalledWith(
+        'user-2',
+        expect.objectContaining({ id: 'notif-1' }),
+      );
     });
 
     it('should throw NotFoundException when user email does not exist', async () => {

@@ -14,6 +14,7 @@ import {
   Bug,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { NotificationBell } from '@/components/notification-bell';
 import { useProject } from '@/hooks/use-projects';
 
 const UUID_PATTERN = /^\/projects\/([0-9a-f-]{36})/i;
@@ -142,15 +143,17 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
               <p className="truncate text-sm font-medium">{user.name}</p>
               <p className="truncate text-xs text-muted-foreground">{user.email}</p>
             </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleLogout}
-              title="Sign out"
-              className="shrink-0"
-            >
-              <LogOut className="h-4 w-4" />
-            </Button>
+            <div className="flex shrink-0 items-center gap-1">
+              <NotificationBell />
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleLogout}
+                title="Sign out"
+              >
+                <LogOut className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
         </div>
       </aside>

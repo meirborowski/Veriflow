@@ -4,6 +4,8 @@ import {
   ConflictException,
   BadRequestException,
   Logger,
+  Inject,
+  forwardRef,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, In, Repository, SelectQueryBuilder } from 'typeorm';
@@ -11,12 +13,15 @@ import { Release } from './entities/release.entity';
 import { ReleaseStory } from './entities/release-story.entity';
 import { ReleaseStoryStep } from './entities/release-story-step.entity';
 import { UserStory } from '../user-stories/entities/user-story.entity';
+import { ProjectMember } from '../projects/entities/project-member.entity';
 import { CreateReleaseDto } from './dto/create-release.dto';
 import { UpdateReleaseDto } from './dto/update-release.dto';
 import { ReleaseQueryDto } from './dto/release-query.dto';
 import { AddStoriesDto } from './dto/add-stories.dto';
-import { ReleaseStatus } from '../common/types/enums';
+import { ReleaseStatus, NotificationType } from '../common/types/enums';
 import type { PaginatedResponse } from '../common/types/pagination';
+import { NotificationsService } from '../notifications/notifications.service';
+import { NotificationsGateway } from '../notifications/notifications.gateway';
 
 export interface ReleaseListItem {
   id: string;
@@ -38,7 +43,13 @@ export class ReleasesService {
     private readonly releaseStoryRepository: Repository<ReleaseStory>,
     @InjectRepository(UserStory)
     private readonly storyRepository: Repository<UserStory>,
+    @InjectRepository(ProjectMember)
+    private readonly memberRepository: Repository<ProjectMember>,
     private readonly dataSource: DataSource,
+    @Inject(forwardRef(() => NotificationsService))
+    private readonly notificationsService: NotificationsService,
+    @Inject(forwardRef(() => NotificationsGateway))
+    private readonly notificationsGateway: NotificationsGateway,
   ) {}
 
   async create(projectId: string, dto: CreateReleaseDto): Promise<Release> {
@@ -286,6 +297,24 @@ export class ReleasesService {
     this.logger.log(
       `Release closed: id=${releaseId}, project=${result.projectId}, stories=${result.storyCount}`,
     );
+
+    // Notify all project members
+    const members = await this.memberRepository.find({
+      where: { projectId: result.projectId },
+      select: ['userId'],
+    });
+
+    for (const member of members) {
+      const notification = await this.notificationsService.create({
+        userId: member.userId,
+        type: NotificationType.RELEASE_CLOSED,
+        title: 'Release closed',
+        message: `Release "${result.name}" has been closed with ${result.storyCount} stories`,
+        relatedEntityType: 'release',
+        relatedEntityId: releaseId,
+      });
+      this.notificationsGateway.notifyUser(member.userId, notification);
+    }
 
     return {
       id: result.id,

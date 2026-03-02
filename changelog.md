@@ -2,6 +2,15 @@
 
 ## 2026-03-02
 
+- feat: add in-app notifications module (entity, service, controller, gateway) with WebSocket real-time delivery
+- feat: add NotificationType enum (BUG_ASSIGNED, BUG_STATUS_CHANGED, RELEASE_CLOSED, MEMBER_ADDED)
+- feat: trigger notifications on bug assignment, bug status change, release close, and member addition
+- feat: add notification bell component with unread count badge, dropdown panel, and mark-as-read actions
+- feat: add NotificationSocketProvider for real-time notification delivery via Socket.io
+- test: add unit tests for notifications service, controller, and gateway
+- test: add E2E tests for notification endpoints and trigger scenarios
+- docs: add Phase 6 — Playwright Automation Integration plan to project_spec, project_status, architecture, and CLAUDE.md
+- docs: add test execution architecture — worker service, Bull job queue, tunnel CLI, trigger/status endpoints
 - feat: add ILIKE search to bugs (title/description), releases (name), and projects (name) list endpoints
 - feat: add dynamic sort (orderBy + sortDir) with allowlisted columns to all list endpoints
 - feat: create ProjectQueryDto and refactor projects.findAllForUser to QueryBuilder
