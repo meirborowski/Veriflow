@@ -153,11 +153,10 @@ Bug severity follows the same heat scale: `Critical` = red, `Major` = orange, `M
 ### Branch Strategy
 ```
 main                    ← production-ready, always stable
-  └── develop           ← integration branch, all features merge here
-        ├── feat/...    ← new features
-        ├── fix/...     ← bug fixes
-        ├── refactor/...← code restructuring
-        └── chore/...   ← tooling, config, deps
+  ├── feat/...          ← new features
+  ├── fix/...           ← bug fixes
+  ├── refactor/...      ← code restructuring
+  └── chore/...         ← tooling, config, deps
 ```
 
 ### Branch Naming
@@ -173,12 +172,11 @@ Format: `<type>/<short-description>`
 | `test` | Adding or fixing tests | `test/release-e2e` |
 
 ### Rules
-- **Never push directly to `main`** — all changes go through `develop` first.
-- **Never commit directly to `develop`** — always create a new branch (`feat/`, `fix/`, `chore/`, etc.) off `develop` for every change, no matter how small. Commit to the branch, push, and merge via PR.
-- **`develop` → `main`** only via PR when a milestone/phase is stable and tested.
-- **Feature branches** branch off `develop` and merge back into `develop` via PR.
+- **Never push directly to `main`** — all changes go through feature branches + PR.
+- **Always create a new branch** (`feat/`, `fix/`, `chore/`, etc.) off `main` for every change, no matter how small. Commit to the branch, push, and merge via PR.
+- **Feature branches** branch off `main` and merge back into `main` via PR.
 - **Keep branches short-lived** — merge frequently, delete after merge.
-- **Rebase feature branches** on `develop` before opening a PR to keep history clean.
+- **Rebase feature branches** on `main` before opening a PR to keep history clean.
 - **Linear history only** — always merge PRs with `--rebase` (or `--squash`). Never use `--merge`. No merge commits.
 
 ### Commit Messages
@@ -199,8 +197,7 @@ test: add e2e tests for release close endpoint
 
 ### PR Rules
 - Short description of what changed and why.
-- PRs into `develop` — self-merge after checks pass.
-- PRs into `main` — require explicit approval.
+- PRs into `main` — self-merge after checks pass.
 
 ## Commands
 
