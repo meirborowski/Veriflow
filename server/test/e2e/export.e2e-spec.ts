@@ -68,7 +68,7 @@ describe('Export (e2e)', () => {
           title: 'CSV Export Story',
           description: 'Test story for CSV export',
           priority: 'HIGH',
-          steps: [{ instruction: 'Step 1' }],
+          steps: [{ order: 1, instruction: 'Step 1' }],
         })
         .expect(201);
 
@@ -92,7 +92,7 @@ describe('Export (e2e)', () => {
       await request(app.getHttpServer())
         .post(`/api/v1/releases/${releaseId}/close`)
         .set('Authorization', admin.authHeader)
-        .expect(200);
+        .expect(201);
 
       const res = await request(app.getHttpServer())
         .get(`/api/v1/releases/${releaseId}/export?format=csv`)
@@ -114,7 +114,7 @@ describe('Export (e2e)', () => {
           title: 'PDF Export Story',
           description: 'Test story for PDF export',
           priority: 'MEDIUM',
-          steps: [{ instruction: 'Verify PDF' }],
+          steps: [{ order: 1, instruction: 'Verify PDF' }],
         })
         .expect(201);
 
@@ -137,7 +137,7 @@ describe('Export (e2e)', () => {
       await request(app.getHttpServer())
         .post(`/api/v1/releases/${releaseId}/close`)
         .set('Authorization', admin.authHeader)
-        .expect(200);
+        .expect(201);
 
       const res = await request(app.getHttpServer())
         .get(`/api/v1/releases/${releaseId}/export?format=pdf`)

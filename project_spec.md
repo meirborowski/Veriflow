@@ -22,7 +22,7 @@ A User Story is both the feature requirement and the test case.
 | Description | Yes | The requirement / acceptance criteria |
 | Verification Steps | Yes | Ordered steps that testers execute |
 | Priority | Yes | `Critical`, `High`, `Medium`, `Low` |
-| Attachments | No | Supporting files (future scope) |
+| Attachments | No | Images, PDFs, docs (≤10 MB) attached to a story or bug |
 
 **Lifecycle**: `Draft` → `Active` → `Deprecated`
 

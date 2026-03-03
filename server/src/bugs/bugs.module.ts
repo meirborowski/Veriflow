@@ -10,6 +10,7 @@ import { TestExecution } from '../test-execution/entities/test-execution.entity'
 import { Release } from '../releases/entities/release.entity';
 import { ReleaseStory } from '../releases/entities/release-story.entity';
 import { NotificationsModule } from '../notifications/notifications.module';
+import { Attachment } from '../attachments/entities/attachment.entity';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { NotificationsModule } from '../notifications/notifications.module';
       TestExecution,
       Release,
       ReleaseStory,
+      Attachment,
     ]),
     forwardRef(() => NotificationsModule),
   ],

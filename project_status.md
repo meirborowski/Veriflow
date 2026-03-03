@@ -1,7 +1,7 @@
 # Veriflow — Project Status
 
 ## Current Phase
-**Phase 4 — Defect Tracking** (Complete)
+**Phase 5 — Polish** (Complete)
 
 ## Phase Progress
 
@@ -127,11 +127,11 @@
 ### Phase 5 — Polish
 | Task | Status | Notes |
 |---|---|---|
-| Pagination across all list endpoints | Not Started | |
-| Filtering + search | Not Started | |
-| In-app notifications | Not Started | |
-| Reporting / export | Not Started | |
-| File attachments (stories + bugs) | Not Started | |
+| Pagination across all list endpoints | Done | All list endpoints paginated with `?page&limit` + meta |
+| Filtering + search | Done | ILIKE search + dynamic sort on bugs, releases, stories, projects |
+| In-app notifications | Done | WebSocket + REST; bell component, real-time delivery, mark-as-read |
+| Reporting / export | Done | CSV + PDF export for release reports and bug lists |
+| File attachments (stories + bugs) | Done | MinIO object storage; upload, download, delete on story + bug detail pages |
 
 ### Phase 6 — Playwright Automation Integration
 

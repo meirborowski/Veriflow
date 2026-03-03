@@ -9,6 +9,7 @@ import { PriorityBadge } from '@/components/priority-badge';
 import { StatusBadge } from '@/components/status-badge';
 import { useProject } from '@/hooks/use-projects';
 import { useStory } from '@/hooks/use-user-stories';
+import { AttachmentList } from '@/components/attachment-list';
 import { StoryDetailSkeleton } from './_components/story-detail-skeleton';
 import { EditStoryForm } from './_components/edit-story-form';
 
@@ -103,6 +104,10 @@ export default function StoryDetailPage({
                 </li>
               ))}
             </ol>
+          </div>
+
+          <div className="mt-8">
+            <AttachmentList entityType="story" entityId={storyId} />
           </div>
         </>
       )}

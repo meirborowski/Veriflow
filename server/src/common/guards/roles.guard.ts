@@ -17,6 +17,7 @@ import { UserStory } from '../../user-stories/entities/user-story.entity';
 import { Release } from '../../releases/entities/release.entity';
 import { TestExecution } from '../../test-execution/entities/test-execution.entity';
 import { Bug } from '../../bugs/entities/bug.entity';
+import { Attachment } from '../../attachments/entities/attachment.entity';
 import type { JwtPayload } from '../decorators/current-user.decorator';
 
 @Injectable()
@@ -33,6 +34,8 @@ export class RolesGuard implements CanActivate {
     private readonly executionRepository: Repository<TestExecution>,
     @InjectRepository(Bug)
     private readonly bugRepository: Repository<Bug>,
+    @InjectRepository(Attachment)
+    private readonly attachmentRepository: Repository<Attachment>,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -132,6 +135,70 @@ export class RolesGuard implements CanActivate {
       }
 
       projectId = bug.projectId;
+    } else if (resolveFrom === 'attachment') {
+      const attachmentId = request.params.id as string | undefined;
+      if (!attachmentId) {
+        throw new ForbiddenException('Attachment ID is required');
+      }
+
+      const attachment = await this.attachmentRepository.findOne({
+        where: { id: attachmentId },
+        select: ['id', 'entityType', 'entityId'],
+      });
+
+      if (!attachment) {
+        throw new NotFoundException('Attachment not found');
+      }
+
+      if (attachment.entityType === 'story') {
+        const story = await this.storyRepository.findOne({
+          where: { id: attachment.entityId },
+          select: ['id', 'projectId'],
+        });
+        if (!story) throw new NotFoundException('Story not found');
+        projectId = story.projectId;
+      } else if (attachment.entityType === 'bug') {
+        const bug = await this.bugRepository.findOne({
+          where: { id: attachment.entityId },
+          select: ['id', 'projectId'],
+        });
+        if (!bug) throw new NotFoundException('Bug not found');
+        projectId = bug.projectId;
+      } else {
+        throw new ForbiddenException(
+          `Invalid attachment entity type: ${attachment.entityType}`,
+        );
+      }
+    } else if (resolveFrom === 'attachment-entity') {
+      const body = request.body as Record<string, unknown> | undefined;
+      const entityType = (request.params.entityType ?? body?.entityType) as
+        | string
+        | undefined;
+      const entityId = (request.params.entityId ?? body?.entityId) as
+        | string
+        | undefined;
+
+      if (!entityType || !entityId) {
+        throw new ForbiddenException('Entity type and entity ID are required');
+      }
+
+      if (entityType === 'story') {
+        const story = await this.storyRepository.findOne({
+          where: { id: entityId },
+          select: ['id', 'projectId'],
+        });
+        if (!story) throw new NotFoundException('Story not found');
+        projectId = story.projectId;
+      } else if (entityType === 'bug') {
+        const bug = await this.bugRepository.findOne({
+          where: { id: entityId },
+          select: ['id', 'projectId'],
+        });
+        if (!bug) throw new NotFoundException('Bug not found');
+        projectId = bug.projectId;
+      } else {
+        throw new ForbiddenException(`Invalid entity type: ${entityType}`);
+      }
     } else {
       projectId = (request.params.projectId ?? request.params.id) as
         | string

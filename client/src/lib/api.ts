@@ -60,8 +60,9 @@ interface ApiOptions extends Omit<RequestInit, 'body'> {
 async function request<T>(endpoint: string, options: ApiOptions = {}): Promise<T> {
   const { body, headers: customHeaders, ...rest } = options;
 
+  const isFormData = body instanceof FormData;
   const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
+    ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
     ...customHeaders as Record<string, string>,
   };
 
@@ -69,10 +70,14 @@ async function request<T>(endpoint: string, options: ApiOptions = {}): Promise<T
     headers['Authorization'] = `Bearer ${accessToken}`;
   }
 
+  const serializedBody = body
+    ? (isFormData ? (body as FormData) : JSON.stringify(body))
+    : undefined;
+
   let res = await fetch(`${BASE_URL}${endpoint}`, {
     ...rest,
     headers,
-    body: body ? JSON.stringify(body) : undefined,
+    body: serializedBody,
   });
 
   if (res.status === 401 && accessToken) {
@@ -82,7 +87,7 @@ async function request<T>(endpoint: string, options: ApiOptions = {}): Promise<T
       res = await fetch(`${BASE_URL}${endpoint}`, {
         ...rest,
         headers,
-        body: body ? JSON.stringify(body) : undefined,
+        body: serializedBody,
       });
     } else {
       accessToken = null;
@@ -127,4 +132,6 @@ export const api = {
     request<T>(endpoint, { ...options, method: 'PATCH', body }),
   delete: <T>(endpoint: string, options?: ApiOptions) =>
     request<T>(endpoint, { ...options, method: 'DELETE' }),
+  upload: <T>(endpoint: string, formData: FormData) =>
+    request<T>(endpoint, { method: 'POST', body: formData }),
 };

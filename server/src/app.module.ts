@@ -10,6 +10,7 @@ import { TestExecutionModule } from './test-execution/test-execution.module';
 import { BugsModule } from './bugs/bugs.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { ExportModule } from './export/export.module';
+import { AttachmentsModule } from './attachments/attachments.module';
 
 @Module({
   imports: [
@@ -31,6 +32,7 @@ import { ExportModule } from './export/export.module';
     BugsModule,
     NotificationsModule,
     ExportModule,
+    AttachmentsModule,
   ],
   controllers: [AppController],
 })
