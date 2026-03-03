@@ -40,6 +40,8 @@ docker compose up --build
 | Client | http://localhost:3000 |
 | Server | http://localhost:3001 |
 | PostgreSQL | localhost:5432 |
+| MinIO S3 API | http://localhost:9000 |
+| MinIO Console | http://localhost:9001 |
 
 Edit source files on the host — both NestJS and Next.js hot-reload automatically.
 

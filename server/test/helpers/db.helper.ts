@@ -10,6 +10,8 @@ import { ReleaseStoryStep } from '../../src/releases/entities/release-story-step
 import { TestExecution } from '../../src/test-execution/entities/test-execution.entity';
 import { StepResult } from '../../src/test-execution/entities/step-result.entity';
 import { Bug } from '../../src/bugs/entities/bug.entity';
+import { Notification } from '../../src/notifications/entities/notification.entity';
+import { Attachment } from '../../src/attachments/entities/attachment.entity';
 import { getTestDatabaseUrl } from '../test-db-url';
 
 export { getTestDatabaseUrl };
@@ -36,6 +38,8 @@ export async function initTestDataSource(): Promise<DataSource> {
       TestExecution,
       StepResult,
       Bug,
+      Notification,
+      Attachment,
     ],
     synchronize: true,
   });
@@ -52,6 +56,8 @@ export async function truncateAll(ds?: DataSource): Promise<void> {
 
   await source.query(`
     TRUNCATE
+      attachments,
+      notifications,
       step_results,
       test_executions,
       release_story_steps,

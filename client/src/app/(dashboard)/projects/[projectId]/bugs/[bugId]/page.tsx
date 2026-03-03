@@ -30,6 +30,7 @@ import { BugStatusBadge } from '@/components/bug-status-badge';
 import { useProject } from '@/hooks/use-projects';
 import { useBug, useUpdateBug, useDeleteBug } from '@/hooks/use-bugs';
 import { BugSeverity, BugStatus } from '@/types/bugs';
+import { AttachmentList } from '@/components/attachment-list';
 
 function formatDateTime(dateString: string): string {
   return new Date(dateString).toLocaleString('en-US', {
@@ -248,6 +249,11 @@ export default function BugDetailPage({
           {bug.description}
         </p>
       </div>
+
+      <Separator className="my-6" />
+
+      {/* Attachments */}
+      <AttachmentList entityType="bug" entityId={bugId} />
 
       {/* Delete dialog */}
       <AlertDialog open={showDelete} onOpenChange={setShowDelete}>

@@ -9,6 +9,7 @@ import { Bug } from '../bugs/entities/bug.entity';
 import { ProjectMember } from '../projects/entities/project-member.entity';
 import { UserStory } from '../user-stories/entities/user-story.entity';
 import { RolesGuard } from '../common/guards/roles.guard';
+import { Attachment } from '../attachments/entities/attachment.entity';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { RolesGuard } from '../common/guards/roles.guard';
       Bug,
       ProjectMember,
       UserStory,
+      Attachment,
     ]),
   ],
   controllers: [ExportController],

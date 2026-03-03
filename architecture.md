@@ -47,8 +47,12 @@ docker compose up --build
   │     Port 5432 │ Named volume: pgdata
   │     Health check: pg_isready
   │
+  ├── minio (minio/minio:latest)
+  │     Ports 9000 (S3 API) / 9001 (console) │ Named volume: miniodata
+  │     Health check: mc ready local
+  │
   ├── server (node:20.12.2-alpine)
-  │     Port 3001 │ Depends on: db (healthy)
+  │     Port 3001 │ Depends on: db (healthy), minio (healthy)
   │     Volume: ./server → /app (hot-reload)
   │     CMD: npm run start:dev
   │
@@ -130,6 +134,15 @@ AppModule
   │
   ├── BugsModule
   │     └── depends on: AuthModule, ProjectsModule, UserStoriesModule
+  │
+  ├── NotificationsModule
+  │     └── depends on: AuthModule (standalone — used by BugsModule, ReleasesModule, ProjectsModule)
+  │
+  ├── ExportModule
+  │     └── depends on: AuthModule, ReleasesModule, BugsModule
+  │
+  ├── AttachmentsModule
+  │     └── depends on: AuthModule, UserStoriesModule, BugsModule
   │
   └── AutomationModule
         └── depends on: AuthModule, ProjectsModule, UserStoriesModule, ReleasesModule
@@ -361,6 +374,13 @@ Client                          Server
                ┌──────────────┐
                │  StepResult  │
                └──────────────┘
+
+┌──────────┐    ┌──────────────┐
+│   User   │    │  Attachment  │
+│          │───►│  (file ref)  │
+└──────────┘    │  entityType  │
+   uploadedBy   │  entityId    │
+                └──────────────┘
 
                         ┌────────────────┐
          ┌──────────────│ PlaywrightTest │──────────────┐
@@ -712,11 +732,14 @@ docker compose up --build
   ├── db (postgres:16-alpine)
   │     Port 5432
   │
+  ├── minio (minio/minio:latest)
+  │     Port 9000 (S3 API) / 9001 (console) │ Object storage for file attachments
+  │
   ├── redis (redis:7-alpine)
   │     Port 6379 │ Used by Bull job queue
   │
   ├── server (veriflow API)
-  │     Port 3001 │ Depends on: db, redis
+  │     Port 3001 │ Depends on: db, minio, redis
   │     Bull producer (enqueues jobs)
   │     Tunnel server (WSS endpoint)
   │

@@ -12,6 +12,7 @@ import { UserStory } from '../../user-stories/entities/user-story.entity';
 import { Release } from '../../releases/entities/release.entity';
 import { TestExecution } from '../../test-execution/entities/test-execution.entity';
 import { Bug } from '../../bugs/entities/bug.entity';
+import { Attachment } from '../../attachments/entities/attachment.entity';
 import { ROLES_KEY } from '../decorators/roles.decorator';
 import { RESOLVE_PROJECT_KEY } from '../decorators/resolve-project.decorator';
 
@@ -23,6 +24,7 @@ describe('RolesGuard', () => {
   let releaseRepository: jest.Mocked<Repository<Release>>;
   let executionRepository: jest.Mocked<Repository<TestExecution>>;
   let bugRepository: jest.Mocked<Repository<Bug>>;
+  let attachmentRepository: jest.Mocked<Repository<Attachment>>;
 
   beforeEach(() => {
     reflector = new Reflector();
@@ -41,6 +43,9 @@ describe('RolesGuard', () => {
     bugRepository = {
       findOne: jest.fn(),
     } as unknown as jest.Mocked<Repository<Bug>>;
+    attachmentRepository = {
+      findOne: jest.fn(),
+    } as unknown as jest.Mocked<Repository<Attachment>>;
 
     guard = new RolesGuard(
       reflector,
@@ -49,18 +54,20 @@ describe('RolesGuard', () => {
       releaseRepository,
       executionRepository,
       bugRepository,
+      attachmentRepository,
     );
   });
 
   function createMockContext(
     user?: { userId: string; email: string },
     params: Record<string, string> = {},
+    body: Record<string, string> = {},
   ): ExecutionContext {
     return {
       getHandler: jest.fn(),
       getClass: jest.fn(),
       switchToHttp: () => ({
-        getRequest: () => ({ user, params }),
+        getRequest: () => ({ user, params, body }),
       }),
     } as unknown as ExecutionContext;
   }
@@ -423,6 +430,198 @@ describe('RolesGuard', () => {
       .mockImplementation((key: string) => {
         if (key === ROLES_KEY) return [UserRole.ADMIN];
         if (key === RESOLVE_PROJECT_KEY) return 'bug';
+        return undefined;
+      });
+
+    const context = createMockContext(
+      { userId: 'user-1', email: 'test@test.com' },
+      {},
+    );
+
+    await expect(guard.canActivate(context)).rejects.toThrow(
+      ForbiddenException,
+    );
+  });
+
+  // Attachment resolution tests
+
+  it('should resolve projectId from attachment via story', async () => {
+    jest
+      .spyOn(reflector, 'getAllAndOverride')
+      .mockImplementation((key: string) => {
+        if (key === ROLES_KEY) return [UserRole.ADMIN];
+        if (key === RESOLVE_PROJECT_KEY) return 'attachment';
+        return undefined;
+      });
+
+    attachmentRepository.findOne.mockResolvedValue({
+      id: 'att-1',
+      entityType: 'story',
+      entityId: 'story-1',
+    } as Attachment);
+
+    storyRepository.findOne.mockResolvedValue({
+      id: 'story-1',
+      projectId: 'project-1',
+    } as UserStory);
+
+    memberRepository.findOne.mockResolvedValue({
+      userId: 'user-1',
+      projectId: 'project-1',
+      role: UserRole.ADMIN,
+    } as ProjectMember);
+
+    const context = createMockContext(
+      { userId: 'user-1', email: 'test@test.com' },
+      { id: 'att-1' },
+    );
+
+    expect(await guard.canActivate(context)).toBe(true);
+  });
+
+  it('should resolve projectId from attachment via bug', async () => {
+    jest
+      .spyOn(reflector, 'getAllAndOverride')
+      .mockImplementation((key: string) => {
+        if (key === ROLES_KEY) return [UserRole.ADMIN];
+        if (key === RESOLVE_PROJECT_KEY) return 'attachment';
+        return undefined;
+      });
+
+    attachmentRepository.findOne.mockResolvedValue({
+      id: 'att-1',
+      entityType: 'bug',
+      entityId: 'bug-1',
+    } as Attachment);
+
+    bugRepository.findOne.mockResolvedValue({
+      id: 'bug-1',
+      projectId: 'project-1',
+    } as Bug);
+
+    memberRepository.findOne.mockResolvedValue({
+      userId: 'user-1',
+      projectId: 'project-1',
+      role: UserRole.ADMIN,
+    } as ProjectMember);
+
+    const context = createMockContext(
+      { userId: 'user-1', email: 'test@test.com' },
+      { id: 'att-1' },
+    );
+
+    expect(await guard.canActivate(context)).toBe(true);
+  });
+
+  it('should throw NotFoundException when attachment is not found', async () => {
+    jest
+      .spyOn(reflector, 'getAllAndOverride')
+      .mockImplementation((key: string) => {
+        if (key === ROLES_KEY) return [UserRole.ADMIN];
+        if (key === RESOLVE_PROJECT_KEY) return 'attachment';
+        return undefined;
+      });
+
+    attachmentRepository.findOne.mockResolvedValue(null);
+
+    const context = createMockContext(
+      { userId: 'user-1', email: 'test@test.com' },
+      { id: 'nonexistent' },
+    );
+
+    await expect(guard.canActivate(context)).rejects.toThrow(NotFoundException);
+  });
+
+  // Attachment-entity resolution tests (resolves from entityType/entityId params or body)
+
+  it('should resolve projectId from attachment-entity params (story)', async () => {
+    jest
+      .spyOn(reflector, 'getAllAndOverride')
+      .mockImplementation((key: string) => {
+        if (key === ROLES_KEY) return [UserRole.ADMIN];
+        if (key === RESOLVE_PROJECT_KEY) return 'attachment-entity';
+        return undefined;
+      });
+
+    storyRepository.findOne.mockResolvedValue({
+      id: 'story-1',
+      projectId: 'project-1',
+    } as UserStory);
+
+    memberRepository.findOne.mockResolvedValue({
+      userId: 'user-1',
+      projectId: 'project-1',
+      role: UserRole.ADMIN,
+    } as ProjectMember);
+
+    const context = createMockContext(
+      { userId: 'user-1', email: 'test@test.com' },
+      { entityType: 'story', entityId: 'story-1' },
+    );
+
+    expect(await guard.canActivate(context)).toBe(true);
+  });
+
+  it('should resolve projectId from attachment-entity body (bug)', async () => {
+    jest
+      .spyOn(reflector, 'getAllAndOverride')
+      .mockImplementation((key: string) => {
+        if (key === ROLES_KEY) return [UserRole.ADMIN];
+        if (key === RESOLVE_PROJECT_KEY) return 'attachment-entity';
+        return undefined;
+      });
+
+    bugRepository.findOne.mockResolvedValue({
+      id: 'bug-1',
+      projectId: 'project-1',
+    } as Bug);
+
+    memberRepository.findOne.mockResolvedValue({
+      userId: 'user-1',
+      projectId: 'project-1',
+      role: UserRole.ADMIN,
+    } as ProjectMember);
+
+    const context = createMockContext(
+      { userId: 'user-1', email: 'test@test.com' },
+      {},
+      { entityType: 'bug', entityId: 'bug-1' },
+    );
+
+    expect(await guard.canActivate(context)).toBe(true);
+  });
+
+  it('should throw ForbiddenException for unknown entityType in attachment resolve', async () => {
+    jest
+      .spyOn(reflector, 'getAllAndOverride')
+      .mockImplementation((key: string) => {
+        if (key === ROLES_KEY) return [UserRole.ADMIN];
+        if (key === RESOLVE_PROJECT_KEY) return 'attachment';
+        return undefined;
+      });
+
+    attachmentRepository.findOne.mockResolvedValue({
+      id: 'att-1',
+      entityType: 'unknown-type',
+      entityId: 'entity-1',
+    } as unknown as import('../../attachments/entities/attachment.entity').Attachment);
+
+    const context = createMockContext(
+      { userId: 'user-1', email: 'test@test.com' },
+      { id: 'att-1' },
+    );
+
+    await expect(guard.canActivate(context)).rejects.toThrow(
+      ForbiddenException,
+    );
+  });
+
+  it('should throw ForbiddenException when entityType/entityId missing for attachment-entity', async () => {
+    jest
+      .spyOn(reflector, 'getAllAndOverride')
+      .mockImplementation((key: string) => {
+        if (key === ROLES_KEY) return [UserRole.ADMIN];
+        if (key === RESOLVE_PROJECT_KEY) return 'attachment-entity';
         return undefined;
       });
 

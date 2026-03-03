@@ -12,7 +12,7 @@ Replace spreadsheet-based QA tracking with a real-time collaborative platform. *
 - Disconnect discards partial work; story reverts to `Untested`
 
 ## Current Milestone
-**Phase 1 — Foundation**: Auth (JWT), Project CRUD, User Story CRUD, Role-based access control.
+**Phase 6 — Playwright Automation Integration**: Playwright test registry, story-test linking, CI/CD result reporting, run trigger, tunnel CLI, dedicated test worker service.
 
 ## Architecture Overview
 
@@ -40,6 +40,9 @@ server/                  → NestJS 11 backend (port 3001)
     releases/            → Release lifecycle + snapshot freeze
     test-execution/      → WebSocket gateway + execution log
     bugs/                → Defect tracking
+    notifications/       → In-app notifications (WebSocket + REST)
+    export/              → CSV + PDF export for releases and bugs
+    attachments/         → File attachments (MinIO S3-compatible storage)
     automation/          → Playwright test registry, linking, run results, trigger
     common/              → Guards, decorators, pipes, interceptors
 worker/                  → Test Worker service (Playwright execution)

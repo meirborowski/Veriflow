@@ -2,6 +2,20 @@
 
 ## 2026-03-02
 
+- feat: add file attachments module with MinIO S3-compatible object storage
+- feat: add Attachment entity (UUID PK, originalName, mimeType, size, storageKey, entityType, entityId)
+- feat: add StorageService wrapping @aws-sdk/client-s3 with upload, delete, getSignedDownloadUrl, auto-bucket creation
+- feat: add AttachmentsService with upload validation (10 MB max, MIME allowlist), CRUD, and project resolution
+- feat: add AttachmentsController with role-guarded endpoints (POST/GET entity/:type/:id, GET :id/download, DELETE :id)
+- feat: add @ResolveProjectFrom('attachment') for attachment-scoped role checking via entity traversal
+- feat: add @ResolveProjectFrom('attachment-entity') for entity-scoped role checking via entityType/entityId params
+- feat: add MinIO service to docker-compose.yml with health check and persistent volume
+- feat: add client AttachmentList component with upload button, file list, download/delete actions
+- feat: add useAttachments, useUploadAttachment, useDeleteAttachment, useDownloadAttachment hooks
+- feat: add attachments section to story detail and bug detail pages
+- test: add 22 unit tests for StorageService, AttachmentsService, AttachmentsController
+- test: add 6 unit tests for RolesGuard attachment and attachment-entity resolution
+- test: add 18 E2E tests for attachment endpoints (upload, list, download, delete, validation, role enforcement)
 - feat: add CSV and PDF export module for release reports and bug lists
 - feat: add streaming CSV generation via fast-csv with release story/step/execution data
 - feat: add PDF generation via pdfkit with formatted release reports and bug reports

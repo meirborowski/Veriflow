@@ -14,6 +14,7 @@ import { ProjectMember } from '../projects/entities/project-member.entity';
 import { UserStory } from '../user-stories/entities/user-story.entity';
 import { Bug } from '../bugs/entities/bug.entity';
 import { BugsModule } from '../bugs/bugs.module';
+import { Attachment } from '../attachments/entities/attachment.entity';
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { BugsModule } from '../bugs/bugs.module';
       ProjectMember,
       UserStory,
       Bug,
+      Attachment,
     ]),
     JwtModule.register({}),
     BugsModule,
