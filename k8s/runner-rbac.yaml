@@ -1,0 +1,32 @@
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: veriflow-runner
+  namespace: veriflow
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: veriflow-runner
+  namespace: veriflow
+rules:
+  - apiGroups: ["batch"]
+    resources: ["jobs"]
+    verbs: ["create", "get", "list", "watch"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: veriflow-runner
+  namespace: veriflow
+subjects:
+  - kind: ServiceAccount
+    name: veriflow-runner
+    namespace: veriflow
+roleRef:
+  kind: Role
+  name: veriflow-runner
+  apiGroup: rbac.authorization.k8s.io

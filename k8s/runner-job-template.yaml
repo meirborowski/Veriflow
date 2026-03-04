@@ -1,0 +1,42 @@
+# Reference template — Jobs are created programmatically by K8sRunSpawnerService.
+# This file documents the expected shape for local testing / documentation purposes.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  generateName: veriflow-runner-
+  namespace: veriflow
+  labels:
+    veriflow-run-id: "<VERIFLOW_RUN_ID>"
+spec:
+  ttlSecondsAfterFinished: 300
+  backoffLimit: 0
+  template:
+    spec:
+      restartPolicy: Never
+      serviceAccountName: veriflow-runner
+      containers:
+        - name: runner
+          image: registry.example.com/veriflow-runner:latest
+          env:
+            - name: VERIFLOW_RUN_ID
+              value: "<VERIFLOW_RUN_ID>"
+            - name: VERIFLOW_REPO_URL
+              value: "<VERIFLOW_REPO_URL>"
+            - name: VERIFLOW_BRANCH
+              value: "<VERIFLOW_BRANCH>"
+            - name: VERIFLOW_TEST_DIRECTORY
+              value: "<VERIFLOW_TEST_DIRECTORY>"
+            - name: VERIFLOW_TEST_FILE
+              value: "<VERIFLOW_TEST_FILE>"
+            - name: VERIFLOW_TEST_NAME
+              value: "<VERIFLOW_TEST_NAME>"
+            - name: VERIFLOW_BASE_URL
+              value: "<VERIFLOW_BASE_URL>"
+            - name: VERIFLOW_PLAYWRIGHT_CONFIG
+              value: "<VERIFLOW_PLAYWRIGHT_CONFIG>"
+            - name: VERIFLOW_AUTH_TOKEN
+              value: "<VERIFLOW_AUTH_TOKEN>"
+            - name: VERIFLOW_API_URL
+              value: "<VERIFLOW_API_URL>"
+            - name: WORKER_API_KEY
+              value: "<WORKER_API_KEY>"

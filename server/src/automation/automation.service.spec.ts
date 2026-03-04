@@ -1,9 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { getQueueToken } from '@nestjs/bull';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { AutomationService } from './automation.service';
+import { RunSpawnerService } from './run-spawner.service';
 import { PlaywrightTest } from './entities/playwright-test.entity';
 import { StoryTestLink } from './entities/story-test-link.entity';
 import { AutomationRun } from './entities/automation-run.entity';
@@ -49,8 +49,8 @@ describe('AutomationService', () => {
   const mockStoryRepo = {
     findOne: jest.fn(),
   };
-  const mockQueue = {
-    add: jest.fn(),
+  const mockRunSpawner = {
+    spawn: jest.fn(),
   };
   const mockConfigService = {
     get: jest.fn(),
@@ -68,7 +68,7 @@ describe('AutomationService', () => {
           useValue: mockConfigRepo,
         },
         { provide: getRepositoryToken(UserStory), useValue: mockStoryRepo },
-        { provide: getQueueToken('automation'), useValue: mockQueue },
+        { provide: RunSpawnerService, useValue: mockRunSpawner },
         { provide: ConfigService, useValue: mockConfigService },
       ],
     }).compile();
@@ -291,7 +291,7 @@ describe('AutomationService', () => {
   });
 
   describe('triggerRun', () => {
-    it('should create runs and enqueue jobs', async () => {
+    it('should create runs and spawn pods', async () => {
       const encKey = generateKey();
       mockConfigService.get.mockReturnValue(encKey);
 
@@ -315,20 +315,50 @@ describe('AutomationService', () => {
       const run = { id: 'run-1' };
       mockRunRepo.create.mockReturnValue(run);
       mockRunRepo.save.mockResolvedValue(run);
-      mockQueue.add.mockResolvedValue(undefined);
+      mockRunSpawner.spawn.mockResolvedValue(undefined);
 
       const result = await service.triggerRun('proj-1', {
         baseUrl: 'http://localhost:3000',
       });
 
       expect(result.runIds).toEqual(['run-1']);
-      expect(mockQueue.add).toHaveBeenCalledWith(
-        'run-test',
+      expect(mockRunSpawner.spawn).toHaveBeenCalledWith(
         expect.objectContaining({
           runId: 'run-1',
           baseUrl: 'http://localhost:3000',
         }),
       );
+    });
+
+    it('should mark run as ERROR and not throw when spawn fails', async () => {
+      mockConfigService.get.mockReturnValue(null);
+      mockConfigRepo.findOne.mockResolvedValue({
+        repoUrl: 'https://github.com/org/repo',
+        branch: 'main',
+        testDirectory: 'tests',
+        playwrightConfig: null,
+        authToken: null,
+      });
+      mockTestRepo.find.mockResolvedValue([
+        { id: 'test-1', testFile: 'a.spec.ts', testName: 'Test A', projectId: 'proj-1' },
+      ]);
+
+      const run = {
+        id: 'run-1',
+        status: AutomationRunStatus.QUEUED,
+        errorMessage: null as string | null,
+        completedAt: null as Date | null,
+      };
+      mockRunRepo.create.mockReturnValue(run);
+      mockRunRepo.save.mockResolvedValue(run);
+      mockRunSpawner.spawn.mockRejectedValue(new Error('No such image: veriflow-runner:latest'));
+
+      const result = await service.triggerRun('proj-1', { baseUrl: 'http://localhost' });
+
+      expect(result.runIds).toEqual(['run-1']);
+      expect(run.status).toBe(AutomationRunStatus.ERROR);
+      expect(run.errorMessage).toContain('No such image');
+      expect(mockRunRepo.save).toHaveBeenCalledTimes(2); // once QUEUED, once ERROR
     });
 
     it('should throw BadRequestException if no repo config', async () => {

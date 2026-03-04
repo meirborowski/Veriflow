@@ -1,5 +1,27 @@
 # Changelog
 
+## 2026-03-04 (pod-spawner)
+
+- feat: replace Bull queue + long-running worker with ephemeral per-run pod spawning
+- feat: add RunSpawnerService abstract class with RunSpawnConfig interface
+- feat: add DockerRunSpawnerService (dockerode) — spawns AutoRemove container per run
+- feat: add K8sRunSpawnerService (@kubernetes/client-node) — creates batch/v1 Job per run
+- feat: SPAWNER_TYPE env var selects docker (default) or k8s at runtime
+- refactor: automation.module.ts — remove BullModule, add spawner provider factory
+- refactor: automation.service.ts — inject RunSpawnerService, replace queue.add with spawn()
+- refactor: worker — delete worker.processor.ts, add RunnerBootstrapService (run-once pipeline)
+- refactor: worker main.ts — createApplicationContext, run bootstrap, exit 0
+- refactor: worker app.module.ts + worker.module.ts — remove BullModule and Redis dependency
+- chore: worker package.json — remove @nestjs/bull, bull, @types/bull
+- chore: server — install dockerode, @types/dockerode, @kubernetes/client-node
+- chore: docker-compose.yml — remove redis + worker services, mount Docker socket into server, add runner build-only profile
+- chore: .env.example — add SPAWNER_TYPE, RUNNER_IMAGE, DOCKER_SOCKET, K8S_* vars; remove REDIS_HOST/PORT
+- feat: add k8s/runner-rbac.yaml (ServiceAccount + Role + RoleBinding for veriflow namespace)
+- feat: add k8s/runner-job-template.yaml (reference Job spec)
+- test: add DockerRunSpawnerService unit tests (mock dockerode)
+- test: add K8sRunSpawnerService unit tests (mock @kubernetes/client-node)
+- test: update automation.service.spec.ts — replace queue mock with RunSpawnerService mock
+
 ## 2026-03-04
 
 - test: add Playwright e2e tests for auth pages (login form, register form, validation, error states)

@@ -23,16 +23,38 @@ export class GitService {
     if (existsSync(join(repoDir, '.git'))) {
       this.logger.log(`Cache hit for ${repoUrl}@${branch} — pulling`);
       const git: SimpleGit = simpleGit(repoDir);
-      await git.pull('origin', branch);
+      try {
+        await git.pull('origin', branch);
+      } catch (err: unknown) {
+        throw this.wrapGitError(err, repoUrl, branch);
+      }
     } else {
       this.logger.log(`Cache miss for ${repoUrl}@${branch} — cloning`);
-      await simpleGit().clone(authenticatedUrl, repoDir, [
-        '--depth', '1',
-        '--branch', branch,
-      ]);
+      try {
+        await simpleGit().clone(authenticatedUrl, repoDir, [
+          '--depth', '1',
+          '--branch', branch,
+        ]);
+      } catch (err: unknown) {
+        throw this.wrapGitError(err, repoUrl, branch);
+      }
     }
 
     return repoDir;
+  }
+
+  private wrapGitError(err: unknown, repoUrl: string, branch: string): Error {
+    const raw = err instanceof Error ? err.message : String(err);
+    if (raw.includes('Remote branch') && raw.includes('not found')) {
+      return new Error(`Branch "${branch}" not found in remote repository. Update your project's repo config to a valid branch.`);
+    }
+    if (raw.includes('Authentication failed') || raw.includes('could not read Username')) {
+      return new Error(`Git authentication failed for ${repoUrl}. Check your auth token in the repo config.`);
+    }
+    if (raw.includes('Repository not found') || raw.includes('does not exist')) {
+      return new Error(`Repository not found: ${repoUrl}. Check the repo URL in the project config.`);
+    }
+    return new Error(`Git operation failed: ${raw}`);
   }
 
   private injectToken(repoUrl: string, token: string): string {

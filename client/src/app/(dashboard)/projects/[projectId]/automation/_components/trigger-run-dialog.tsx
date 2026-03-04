@@ -35,7 +35,7 @@ interface TriggerRunDialogProps {
 export function TriggerRunDialog({ projectId }: TriggerRunDialogProps) {
   const [open, setOpen] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [baseUrl, setBaseUrl] = useState('');
+  const [baseUrl, setBaseUrl] = useState(process.env.NEXT_PUBLIC_RUNNER_BASE_URL ?? '');
   const [runIds, setRunIds] = useState<string[]>([]);
 
   const { data, isLoading } = useTests(projectId, { limit: 100 });
@@ -76,7 +76,7 @@ export function TriggerRunDialog({ projectId }: TriggerRunDialogProps) {
   function handleClose() {
     setOpen(false);
     setSelected(new Set());
-    setBaseUrl('');
+    setBaseUrl(process.env.NEXT_PUBLIC_RUNNER_BASE_URL ?? '');
     setRunIds([]);
   }
 
@@ -121,6 +121,10 @@ export function TriggerRunDialog({ projectId }: TriggerRunDialogProps) {
                 value={baseUrl}
                 onChange={(e) => setBaseUrl(e.target.value)}
               />
+              <p className="text-xs text-muted-foreground">
+                URL that the runner can reach. In Docker Compose use the service name, e.g.{' '}
+                <code className="rounded bg-muted px-1 py-0.5 font-mono text-[11px]">http://client:3000</code>.
+              </p>
             </div>
 
             <div className="space-y-1.5">
