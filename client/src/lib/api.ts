@@ -128,6 +128,8 @@ export const api = {
     request<T>(endpoint, { ...options, method: 'GET' }),
   post: <T>(endpoint: string, body?: unknown, options?: ApiOptions) =>
     request<T>(endpoint, { ...options, method: 'POST', body }),
+  put: <T>(endpoint: string, body?: unknown, options?: ApiOptions) =>
+    request<T>(endpoint, { ...options, method: 'PUT', body }),
   patch: <T>(endpoint: string, body?: unknown, options?: ApiOptions) =>
     request<T>(endpoint, { ...options, method: 'PATCH', body }),
   delete: <T>(endpoint: string, options?: ApiOptions) =>

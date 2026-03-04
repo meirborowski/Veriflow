@@ -7,7 +7,8 @@ import {
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { DataSource, Repository } from 'typeorm';
+import { InjectDataSource } from '@nestjs/typeorm';
 import { Request } from 'express';
 import { ROLES_KEY } from '../decorators/roles.decorator';
 import { RESOLVE_PROJECT_KEY } from '../decorators/resolve-project.decorator';
@@ -36,6 +37,8 @@ export class RolesGuard implements CanActivate {
     private readonly bugRepository: Repository<Bug>,
     @InjectRepository(Attachment)
     private readonly attachmentRepository: Repository<Attachment>,
+    @InjectDataSource()
+    private readonly dataSource: DataSource,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -169,6 +172,38 @@ export class RolesGuard implements CanActivate {
           `Invalid attachment entity type: ${attachment.entityType}`,
         );
       }
+    } else if (resolveFrom === 'automation-test') {
+      const testId = request.params.id as string | undefined;
+      if (!testId) {
+        throw new ForbiddenException('Test ID is required');
+      }
+
+      const test = await this.dataSource.query<{ projectId: string }[]>(
+        `SELECT "projectId" FROM playwright_tests WHERE id = $1 LIMIT 1`,
+        [testId],
+      );
+
+      if (!test.length) {
+        throw new NotFoundException('Playwright test not found');
+      }
+
+      projectId = test[0].projectId;
+    } else if (resolveFrom === 'automation-run') {
+      const runId = request.params.id as string | undefined;
+      if (!runId) {
+        throw new ForbiddenException('Run ID is required');
+      }
+
+      const run = await this.dataSource.query<{ projectId: string }[]>(
+        `SELECT "projectId" FROM automation_runs WHERE id = $1 LIMIT 1`,
+        [runId],
+      );
+
+      if (!run.length) {
+        throw new NotFoundException('Automation run not found');
+      }
+
+      projectId = run[0].projectId;
     } else if (resolveFrom === 'attachment-entity') {
       const body = request.body as Record<string, unknown> | undefined;
       const entityType = (request.params.entityType ?? body?.entityType) as

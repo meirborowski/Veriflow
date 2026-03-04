@@ -1,5 +1,56 @@
 # Changelog
 
+## 2026-03-04 (6c)
+
+- feat: add Phase 6c — Client Automation UI
+- feat: add automation types (PlaywrightTest, AutomationRun, ProjectRepoConfig, AutomationSummary, enums)
+- feat: add use-automation.ts with all TanStack Query hooks (useTests, useTest, useDeleteTest, useLinkTests, useUnlinkTest, useAutomationSummary, useTriggerRun, useRuns, useRun, useRunStatus with 2s polling, useRepoConfig, useUpsertRepoConfig)
+- feat: add AutomationRunStatusBadge with per-status colors (QUEUED/CLONING/INSTALLING/RUNNING/PASS/FAIL/ERROR/TIMEOUT/CANCELLED)
+- feat: add ConflictIndicator warning badge
+- feat: add LinkTestDialog — search+select tests from registry to link to a story
+- feat: add /projects/:id/automation page — test registry table with search, delete, Run Tests button
+- feat: add TriggerRunDialog — select tests + baseUrl → trigger run + live status polling per runId
+- feat: add /projects/:id/automation/:testId page — test detail with linked stories + recent runs table
+- feat: add /projects/:id/automation/runs page — filterable runs list
+- feat: add /projects/:id/automation/runs/:runId page — run detail with status, duration, logs, error
+- feat: add RepoConfigForm to project settings — repoUrl, branch, testDirectory, playwrightConfig, authToken
+- feat: add Automation nav item (Bot icon) to project sidebar
+- feat: add collapsible Automation section to story detail page — linked tests, run statuses, ConflictIndicator, Link/Unlink
+- feat: add Auto Status column to release snapshot stories table
+- feat: add api.put() method to API client
+
+## 2026-03-04
+
+- feat: add Phase 6b — Test Worker Service (standalone NestJS app in worker/)
+- feat: add GitService with SHA-256-based repo cache (/tmp/veriflow-repos/), clone --depth 1 on miss, git pull on hit, PAT token injection into HTTPS URL
+- feat: add RunnerService executing `npx playwright test --reporter=json`, parsing JSON output to PASS/FAIL/ERROR, with configurable timeout
+- feat: add ReporterService PATCHing run status/results to Veriflow API with x-worker-api-key header; swallows reporting errors to avoid masking test results
+- feat: add WorkerProcessor (@Processor('automation')) implementing full state machine: CLONING → INSTALLING → RUNNING → PASS/FAIL/ERROR/TIMEOUT; catches all errors and reports them
+- feat: add WorkerModule, AppModule, main.ts (no HTTP listen — pure Bull consumer)
+- feat: add worker/Dockerfile using mcr.microsoft.com/playwright:v1.49-noble base image
+- feat: add worker service to docker-compose.yml (depends on redis + server, workerrepos volume)
+- feat: add VERIFLOW_API_URL, WORKER_CONCURRENCY, MAX_RUN_DURATION_MS to .env.example
+- test: add 24 unit tests for GitService, RunnerService, ReporterService, WorkerProcessor (all state machine paths including timeout and error)
+
+## 2026-03-03
+
+- feat: add Phase 6a — Playwright Automation Integration (server module)
+- feat: add AutomationRunStatus, AutomationTrigger, LinkSource enums
+- feat: add PlaywrightTest entity (playwright_tests table, UNIQUE projectId+externalId, tags text[])
+- feat: add StoryTestLink entity (story_test_links table, UNIQUE storyId+testId)
+- feat: add AutomationRun entity (automation_runs table, indexed by projectId+testId and projectId+status)
+- feat: add ProjectRepoConfig entity (project_repo_configs table, UNIQUE projectId, encrypted authToken)
+- feat: add AES-256-GCM crypto utility (encrypt/decrypt) for PAT token storage
+- feat: add AutomationService with registrySync, listTests, getTest, deleteTest, linkTests, unlinkTest, getAutomationSummary, triggerRun, reportRun, listRuns, getRun, getRunStatus, updateRunStatus, getRepoConfig, upsertRepoConfig
+- feat: add AutomationController with 15 REST endpoints under /api/v1
+- feat: add WorkerAuthGuard (x-worker-api-key header) for worker PATCH /automation/runs/:id/status
+- feat: add AutomationModule with BullModule (Redis-backed queue named 'automation')
+- feat: add @ResolveProjectFrom('automation-test') and @ResolveProjectFrom('automation-run') to RolesGuard
+- feat: add Redis service to docker-compose.yml (redis:7-alpine, port 5379:6379, health check)
+- feat: add REDIS_HOST, REDIS_PORT, ENCRYPTION_KEY, WORKER_API_KEY to .env.example
+- test: add 58 unit tests for AutomationService, AutomationController, crypto utility, RolesGuard extensions
+- test: add E2E tests for all automation endpoints (registry sync, link/unlink, summary, trigger, runs, repo config, role enforcement)
+
 ## 2026-03-02
 
 - feat: add file attachments module with MinIO S3-compatible object storage

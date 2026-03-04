@@ -8,5 +8,7 @@ export const ResolveProjectFrom = (
     | 'execution'
     | 'bug'
     | 'attachment'
-    | 'attachment-entity',
+    | 'attachment-entity'
+    | 'automation-test'
+    | 'automation-run',
 ) => SetMetadata(RESOLVE_PROJECT_KEY, source);

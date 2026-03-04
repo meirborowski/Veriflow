@@ -12,6 +12,7 @@ import {
   ChevronLeft,
   LogOut,
   Bug,
+  Bot,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { NotificationBell } from '@/components/notification-bell';
@@ -32,6 +33,7 @@ function ProjectNav({ projectId, pathname }: { projectId: string; pathname: stri
     { href: `/projects/${projectId}/stories`, label: 'Stories', icon: FileText },
     { href: `/projects/${projectId}/releases`, label: 'Releases', icon: Package },
     { href: `/projects/${projectId}/bugs`, label: 'Bugs', icon: Bug },
+    { href: `/projects/${projectId}/automation`, label: 'Automation', icon: Bot },
     { href: `/projects/${projectId}/settings`, label: 'Settings', icon: Settings },
   ];
 
