@@ -22,6 +22,7 @@ import { UpsertRepoConfigDto } from './dto/upsert-repo-config.dto';
 import { AutomationQueryDto } from './dto/automation-query.dto';
 import { UpdateRunStatusDto } from './dto/update-run-status.dto';
 import { Roles } from '../common/decorators/roles.decorator';
+import { Public } from '../common/decorators/public.decorator';
 import { ResolveProjectFrom } from '../common/decorators/resolve-project.decorator';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { WorkerAuthGuard } from './guards/worker-auth.guard';
@@ -159,6 +160,7 @@ export class AutomationController {
   }
 
   @Patch('automation/runs/:id/status')
+  @Public()
   @UseGuards(WorkerAuthGuard)
   async updateRunStatus(
     @Param('id', new ParseUUIDPipe({ version: '4' })) id: string,
