@@ -12,6 +12,7 @@ import { ProjectDetailsForm } from './_components/project-details-form';
 import { InviteMemberForm } from './_components/invite-member-form';
 import { MembersSettingsTable } from './_components/members-settings-table';
 import { DeleteProjectSection } from './_components/delete-project-section';
+import { RepoConfigForm } from './_components/repo-config-form';
 
 export default function ProjectSettingsPage({
   params,
@@ -66,6 +67,18 @@ export default function ProjectSettingsPage({
           initialName={project.name}
           initialDescription={project.description}
         />
+      </div>
+
+      <Separator className="my-8" />
+
+      <div>
+        <h2 className="text-lg font-medium">Automation</h2>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Configure the GitHub repository for Playwright test execution.
+        </p>
+        <div className="mt-4">
+          <RepoConfigForm projectId={projectId} />
+        </div>
       </div>
 
       <Separator className="my-8" />

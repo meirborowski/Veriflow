@@ -1,4 +1,15 @@
 services:
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - "5379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
   db:
     image: postgres:16-alpine
     restart: unless-stopped
@@ -45,6 +56,22 @@ services:
         condition: service_healthy
       minio:
         condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  worker:
+    build:
+      context: ./worker
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file: .env
+    volumes:
+      - workerrepos:/tmp/veriflow-repos
+    depends_on:
+      redis:
+        condition: service_healthy
+      server:
+        condition: service_started
 
   client:
     build:
@@ -65,3 +92,4 @@ services:
 volumes:
   pgdata:
   miniodata:
+  workerrepos:

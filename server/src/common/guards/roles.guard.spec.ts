@@ -6,7 +6,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { UserRole } from '../types/enums';
-import { Repository } from 'typeorm';
+import { DataSource, Repository } from 'typeorm';
 import { ProjectMember } from '../../projects/entities/project-member.entity';
 import { UserStory } from '../../user-stories/entities/user-story.entity';
 import { Release } from '../../releases/entities/release.entity';
@@ -25,6 +25,7 @@ describe('RolesGuard', () => {
   let executionRepository: jest.Mocked<Repository<TestExecution>>;
   let bugRepository: jest.Mocked<Repository<Bug>>;
   let attachmentRepository: jest.Mocked<Repository<Attachment>>;
+  let dataSource: jest.Mocked<DataSource>;
 
   beforeEach(() => {
     reflector = new Reflector();
@@ -46,6 +47,9 @@ describe('RolesGuard', () => {
     attachmentRepository = {
       findOne: jest.fn(),
     } as unknown as jest.Mocked<Repository<Attachment>>;
+    dataSource = {
+      query: jest.fn(),
+    } as unknown as jest.Mocked<DataSource>;
 
     guard = new RolesGuard(
       reflector,
@@ -55,6 +59,7 @@ describe('RolesGuard', () => {
       executionRepository,
       bugRepository,
       attachmentRepository,
+      dataSource,
     );
   });
 
@@ -622,6 +627,136 @@ describe('RolesGuard', () => {
       .mockImplementation((key: string) => {
         if (key === ROLES_KEY) return [UserRole.ADMIN];
         if (key === RESOLVE_PROJECT_KEY) return 'attachment-entity';
+        return undefined;
+      });
+
+    const context = createMockContext(
+      { userId: 'user-1', email: 'test@test.com' },
+      {},
+    );
+
+    await expect(guard.canActivate(context)).rejects.toThrow(
+      ForbiddenException,
+    );
+  });
+
+  // Automation-test resolution tests
+
+  it('should resolve projectId from automation-test', async () => {
+    jest
+      .spyOn(reflector, 'getAllAndOverride')
+      .mockImplementation((key: string) => {
+        if (key === ROLES_KEY) return [UserRole.ADMIN];
+        if (key === RESOLVE_PROJECT_KEY) return 'automation-test';
+        return undefined;
+      });
+
+    dataSource.query.mockResolvedValue([{ projectId: 'project-1' }]);
+
+    memberRepository.findOne.mockResolvedValue({
+      userId: 'user-1',
+      projectId: 'project-1',
+      role: UserRole.ADMIN,
+    } as ProjectMember);
+
+    const context = createMockContext(
+      { userId: 'user-1', email: 'test@test.com' },
+      { id: 'test-1' },
+    );
+
+    expect(await guard.canActivate(context)).toBe(true);
+  });
+
+  it('should throw NotFoundException when automation-test is not found', async () => {
+    jest
+      .spyOn(reflector, 'getAllAndOverride')
+      .mockImplementation((key: string) => {
+        if (key === ROLES_KEY) return [UserRole.ADMIN];
+        if (key === RESOLVE_PROJECT_KEY) return 'automation-test';
+        return undefined;
+      });
+
+    dataSource.query.mockResolvedValue([]);
+
+    const context = createMockContext(
+      { userId: 'user-1', email: 'test@test.com' },
+      { id: 'nonexistent-test' },
+    );
+
+    await expect(guard.canActivate(context)).rejects.toThrow(NotFoundException);
+  });
+
+  it('should throw ForbiddenException when automation-test ID param is missing', async () => {
+    jest
+      .spyOn(reflector, 'getAllAndOverride')
+      .mockImplementation((key: string) => {
+        if (key === ROLES_KEY) return [UserRole.ADMIN];
+        if (key === RESOLVE_PROJECT_KEY) return 'automation-test';
+        return undefined;
+      });
+
+    const context = createMockContext(
+      { userId: 'user-1', email: 'test@test.com' },
+      {},
+    );
+
+    await expect(guard.canActivate(context)).rejects.toThrow(
+      ForbiddenException,
+    );
+  });
+
+  // Automation-run resolution tests
+
+  it('should resolve projectId from automation-run', async () => {
+    jest
+      .spyOn(reflector, 'getAllAndOverride')
+      .mockImplementation((key: string) => {
+        if (key === ROLES_KEY) return [UserRole.ADMIN];
+        if (key === RESOLVE_PROJECT_KEY) return 'automation-run';
+        return undefined;
+      });
+
+    dataSource.query.mockResolvedValue([{ projectId: 'project-1' }]);
+
+    memberRepository.findOne.mockResolvedValue({
+      userId: 'user-1',
+      projectId: 'project-1',
+      role: UserRole.ADMIN,
+    } as ProjectMember);
+
+    const context = createMockContext(
+      { userId: 'user-1', email: 'test@test.com' },
+      { id: 'run-1' },
+    );
+
+    expect(await guard.canActivate(context)).toBe(true);
+  });
+
+  it('should throw NotFoundException when automation-run is not found', async () => {
+    jest
+      .spyOn(reflector, 'getAllAndOverride')
+      .mockImplementation((key: string) => {
+        if (key === ROLES_KEY) return [UserRole.ADMIN];
+        if (key === RESOLVE_PROJECT_KEY) return 'automation-run';
+        return undefined;
+      });
+
+    dataSource.query.mockResolvedValue([]);
+
+    const context = createMockContext(
+      { userId: 'user-1', email: 'test@test.com' },
+      { id: 'nonexistent-run' },
+    );
+
+    await expect(guard.canActivate(context)).rejects.toThrow(NotFoundException);
+  });
+
+  it('should throw ForbiddenException when automation-run ID param is missing', async () => {
+    jest
+      .spyOn(reflector, 'getAllAndOverride')
+      .mockImplementation((key: string) => {
+        if (key === ROLES_KEY) return [UserRole.ADMIN];
+        if (key === RESOLVE_PROJECT_KEY) return 'automation-run';
         return undefined;
       });
 

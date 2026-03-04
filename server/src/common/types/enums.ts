@@ -59,3 +59,27 @@ export enum NotificationType {
   RELEASE_CLOSED = 'RELEASE_CLOSED',
   MEMBER_ADDED = 'MEMBER_ADDED',
 }
+
+export enum AutomationRunStatus {
+  QUEUED = 'QUEUED',
+  CLONING = 'CLONING',
+  INSTALLING = 'INSTALLING',
+  RUNNING = 'RUNNING',
+  PASS = 'PASS',
+  FAIL = 'FAIL',
+  ERROR = 'ERROR',
+  SKIPPED = 'SKIPPED',
+  TIMEOUT = 'TIMEOUT',
+  CANCELLED = 'CANCELLED',
+}
+
+export enum AutomationTrigger {
+  UI = 'UI',
+  CI_CD = 'CI_CD',
+  REGISTRY_SYNC = 'REGISTRY_SYNC',
+}
+
+export enum LinkSource {
+  USER = 'USER',
+  AUTO_DISCOVERY = 'AUTO_DISCOVERY',
+}

@@ -12,6 +12,10 @@ import { StepResult } from '../../src/test-execution/entities/step-result.entity
 import { Bug } from '../../src/bugs/entities/bug.entity';
 import { Notification } from '../../src/notifications/entities/notification.entity';
 import { Attachment } from '../../src/attachments/entities/attachment.entity';
+import { PlaywrightTest } from '../../src/automation/entities/playwright-test.entity';
+import { StoryTestLink } from '../../src/automation/entities/story-test-link.entity';
+import { AutomationRun } from '../../src/automation/entities/automation-run.entity';
+import { ProjectRepoConfig } from '../../src/automation/entities/project-repo-config.entity';
 import { getTestDatabaseUrl } from '../test-db-url';
 
 export { getTestDatabaseUrl };
@@ -40,6 +44,10 @@ export async function initTestDataSource(): Promise<DataSource> {
       Bug,
       Notification,
       Attachment,
+      PlaywrightTest,
+      StoryTestLink,
+      AutomationRun,
+      ProjectRepoConfig,
     ],
     synchronize: true,
   });
@@ -56,6 +64,10 @@ export async function truncateAll(ds?: DataSource): Promise<void> {
 
   await source.query(`
     TRUNCATE
+      story_test_links,
+      automation_runs,
+      playwright_tests,
+      project_repo_configs,
       attachments,
       notifications,
       step_results,

@@ -11,6 +11,7 @@ import { BugsModule } from './bugs/bugs.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { ExportModule } from './export/export.module';
 import { AttachmentsModule } from './attachments/attachments.module';
+import { AutomationModule } from './automation/automation.module';
 
 @Module({
   imports: [
@@ -33,6 +34,7 @@ import { AttachmentsModule } from './attachments/attachments.module';
     NotificationsModule,
     ExportModule,
     AttachmentsModule,
+    AutomationModule,
   ],
   controllers: [AppController],
 })

@@ -2,13 +2,17 @@
 
 import { use, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Pencil } from 'lucide-react';
+import { ChevronDown, ChevronRight, Pencil, Unlink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Breadcrumbs } from '@/components/breadcrumbs';
 import { PriorityBadge } from '@/components/priority-badge';
 import { StatusBadge } from '@/components/status-badge';
+import { AutomationRunStatusBadge } from '@/components/automation-run-status-badge';
+import { ConflictIndicator } from '@/components/conflict-indicator';
+import { LinkTestDialog } from '@/components/link-test-dialog';
 import { useProject } from '@/hooks/use-projects';
 import { useStory } from '@/hooks/use-user-stories';
+import { useAutomationSummary, useUnlinkTest } from '@/hooks/use-automation';
 import { AttachmentList } from '@/components/attachment-list';
 import { StoryDetailSkeleton } from './_components/story-detail-skeleton';
 import { EditStoryForm } from './_components/edit-story-form';
@@ -21,8 +25,11 @@ export default function StoryDetailPage({
   const { projectId, storyId } = use(params);
   const searchParams = useSearchParams();
   const [isEditing, setIsEditing] = useState(searchParams.get('edit') === 'true');
+  const [autoExpanded, setAutoExpanded] = useState(false);
   const { data: project } = useProject(projectId);
   const { data: story, isLoading, isError, refetch } = useStory(storyId);
+  const { data: automationSummary } = useAutomationSummary(storyId);
+  const { mutate: unlinkTest } = useUnlinkTest(storyId);
 
   if (isLoading) return <StoryDetailSkeleton />;
 
@@ -104,6 +111,69 @@ export default function StoryDetailPage({
                 </li>
               ))}
             </ol>
+          </div>
+
+          <div className="mt-8 rounded-md border">
+            <button
+              type="button"
+              className="flex w-full items-center justify-between px-4 py-3 text-left"
+              onClick={() => setAutoExpanded((p) => !p)}
+            >
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium">
+                  Automation ({automationSummary?.tests.length ?? 0})
+                </span>
+                {automationSummary?.hasConflict && <ConflictIndicator />}
+              </div>
+              {autoExpanded ? (
+                <ChevronDown className="h-4 w-4 text-muted-foreground" />
+              ) : (
+                <ChevronRight className="h-4 w-4 text-muted-foreground" />
+              )}
+            </button>
+            {autoExpanded && (
+              <div className="border-t px-4 pb-4 pt-3">
+                {automationSummary && automationSummary.tests.length > 0 ? (
+                  <ul className="divide-y rounded-md border">
+                    {automationSummary.tests.map((t) => (
+                      <li key={t.id} className="flex items-center justify-between px-3 py-2">
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-medium">{t.testName}</p>
+                          <p className="truncate font-mono text-xs text-muted-foreground">
+                            {t.testFile}
+                          </p>
+                        </div>
+                        <div className="ml-3 flex shrink-0 items-center gap-2">
+                          {t.latestRunStatus ? (
+                            <AutomationRunStatusBadge status={t.latestRunStatus} />
+                          ) : (
+                            <span className="text-xs text-muted-foreground">No runs</span>
+                          )}
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                            onClick={() => unlinkTest(t.id)}
+                            title="Unlink test"
+                          >
+                            <Unlink className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-sm text-muted-foreground">No tests linked yet.</p>
+                )}
+                <div className="mt-3">
+                  <LinkTestDialog
+                    storyId={storyId}
+                    projectId={projectId}
+                    linkedTestIds={automationSummary?.tests.map((t) => t.id) ?? []}
+                  />
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="mt-8">

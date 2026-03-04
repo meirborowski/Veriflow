@@ -11,7 +11,26 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { PriorityBadge } from '@/components/priority-badge';
+import { AutomationRunStatusBadge } from '@/components/automation-run-status-badge';
+import { useAutomationSummary } from '@/hooks/use-automation';
 import type { ReleaseDetailSnapshotStory } from '@/types/releases';
+
+function AutomationStatusCell({ storyId }: { storyId: string }) {
+  const { data } = useAutomationSummary(storyId);
+  if (!data || data.tests.length === 0) {
+    return <span className="text-xs text-muted-foreground">—</span>;
+  }
+  const statuses = data.tests.map((t) => t.latestRunStatus).filter(Boolean);
+  if (statuses.length === 0) {
+    return <span className="text-xs text-muted-foreground">No runs</span>;
+  }
+  // Show worst status: FAIL > ERROR > TIMEOUT > others > PASS
+  const priority = ['FAIL', 'ERROR', 'TIMEOUT', 'RUNNING', 'QUEUED', 'PASS'];
+  const sorted = statuses.sort(
+    (a, b) => priority.indexOf(a ?? '') - priority.indexOf(b ?? ''),
+  );
+  return <AutomationRunStatusBadge status={sorted[0]!} />;
+}
 
 interface SnapshotStoriesTableProps {
   stories: ReleaseDetailSnapshotStory[];
@@ -40,6 +59,7 @@ export function SnapshotStoriesTable({ stories }: SnapshotStoriesTableProps) {
           <TableHead>Title</TableHead>
           <TableHead>Priority</TableHead>
           <TableHead>Steps</TableHead>
+          <TableHead>Auto Status</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -105,6 +125,9 @@ export function SnapshotStoriesTable({ stories }: SnapshotStoriesTableProps) {
               </TableCell>
               <TableCell className="align-top tabular-nums text-muted-foreground">
                 {story.steps.length}
+              </TableCell>
+              <TableCell className="align-top" onClick={(e) => e.stopPropagation()}>
+                <AutomationStatusCell storyId={story.id} />
               </TableCell>
             </TableRow>
           );
