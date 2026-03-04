@@ -1,3 +1,4 @@
+import * as path from 'path';
 import { Process, Processor } from '@nestjs/bull';
 import { Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -44,7 +45,7 @@ export class WorkerProcessor {
 
   @Process('run-test')
   async handleRunTest(job: Job<RunTestJobData>): Promise<void> {
-    const { runId, repoUrl, branch, testFile, testName, baseUrl, playwrightConfig, authToken } =
+    const { runId, repoUrl, branch, testDirectory, testFile, testName, baseUrl, playwrightConfig, authToken } =
       job.data;
 
     this.logger.log(`Processing run ${runId}: ${testFile} — ${testName}`);
@@ -53,15 +54,16 @@ export class WorkerProcessor {
       // 1. Clone / pull
       await this.reporter.updateStatus(runId, STATUS.CLONING);
       const repoDir = await this.git.prepare(repoUrl, branch, authToken);
+      const workDir = testDirectory ? path.join(repoDir, testDirectory) : repoDir;
 
       // 2. npm ci
       await this.reporter.updateStatus(runId, STATUS.INSTALLING);
-      await this.install(repoDir);
+      await this.install(workDir);
 
       // 3. Run Playwright
       await this.reporter.updateStatus(runId, STATUS.RUNNING);
       const result = await this.runner.run(
-        repoDir,
+        workDir,
         testFile,
         testName,
         baseUrl,
@@ -99,13 +101,18 @@ export class WorkerProcessor {
     }
   }
 
-  private install(repoDir: string): Promise<void> {
+  private install(workDir: string): Promise<void> {
+    return this.spawn('npm', ['ci'], workDir)
+      .then(() => this.spawn('npx', ['playwright', 'install', 'chromium', '--with-deps'], workDir));
+  }
+
+  private spawn(cmd: string, args: string[], cwd: string): Promise<void> {
     return new Promise((resolve, reject) => {
       const { spawn } = require('child_process') as typeof import('child_process');
-      const child = spawn('npm', ['ci'], { cwd: repoDir, stdio: 'inherit' });
+      const child = spawn(cmd, args, { cwd, stdio: 'inherit' });
       child.on('close', (code: number | null) => {
         if (code === 0) resolve();
-        else reject(new Error(`npm ci exited with code ${code ?? 'null'}`));
+        else reject(new Error(`${cmd} ${args[0]} exited with code ${code ?? 'null'}`));
       });
       child.on('error', reject);
     });
