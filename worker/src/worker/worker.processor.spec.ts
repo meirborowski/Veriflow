@@ -71,7 +71,9 @@ describe('WorkerProcessor', () => {
   describe('happy path — PASS', () => {
     it('should progress through CLONING → INSTALLING → RUNNING → PASS', async () => {
       mockGit.prepare.mockResolvedValue('/tmp/repo');
-      mockSpawn.mockReturnValue(makeInstallProcess(0) as unknown as ReturnType<typeof spawn>);
+      mockSpawn
+        .mockReturnValueOnce(makeInstallProcess(0) as unknown as ReturnType<typeof spawn>)
+        .mockReturnValueOnce(makeInstallProcess(0) as unknown as ReturnType<typeof spawn>);
       mockRunner.run.mockResolvedValue({ outcome: 'pass', duration: 1234, logs: 'ok' });
       mockReporter.updateStatus.mockResolvedValue(undefined);
       mockReporter.reportResult.mockResolvedValue(undefined);
@@ -91,7 +93,9 @@ describe('WorkerProcessor', () => {
   describe('happy path — FAIL', () => {
     it('should report FAIL when runner returns fail', async () => {
       mockGit.prepare.mockResolvedValue('/tmp/repo');
-      mockSpawn.mockReturnValue(makeInstallProcess(0) as unknown as ReturnType<typeof spawn>);
+      mockSpawn
+        .mockReturnValueOnce(makeInstallProcess(0) as unknown as ReturnType<typeof spawn>)
+        .mockReturnValueOnce(makeInstallProcess(0) as unknown as ReturnType<typeof spawn>);
       mockRunner.run.mockResolvedValue({ outcome: 'fail', duration: 500, logs: 'assertion error' });
       mockReporter.updateStatus.mockResolvedValue(undefined);
       mockReporter.reportResult.mockResolvedValue(undefined);
@@ -108,7 +112,9 @@ describe('WorkerProcessor', () => {
   describe('timeout', () => {
     it('should report TIMEOUT when runner returns timeout error message', async () => {
       mockGit.prepare.mockResolvedValue('/tmp/repo');
-      mockSpawn.mockReturnValue(makeInstallProcess(0) as unknown as ReturnType<typeof spawn>);
+      mockSpawn
+        .mockReturnValueOnce(makeInstallProcess(0) as unknown as ReturnType<typeof spawn>)
+        .mockReturnValueOnce(makeInstallProcess(0) as unknown as ReturnType<typeof spawn>);
       mockRunner.run.mockResolvedValue({
         outcome: 'error',
         duration: 600_000,
@@ -157,7 +163,9 @@ describe('WorkerProcessor', () => {
 
     it('should report ERROR when runner throws', async () => {
       mockGit.prepare.mockResolvedValue('/tmp/repo');
-      mockSpawn.mockReturnValue(makeInstallProcess(0) as unknown as ReturnType<typeof spawn>);
+      mockSpawn
+        .mockReturnValueOnce(makeInstallProcess(0) as unknown as ReturnType<typeof spawn>)
+        .mockReturnValueOnce(makeInstallProcess(0) as unknown as ReturnType<typeof spawn>);
       mockRunner.run.mockRejectedValue(new Error('Playwright not found'));
       mockReporter.updateStatus.mockResolvedValue(undefined);
       mockReporter.reportResult.mockResolvedValue(undefined);
@@ -172,7 +180,9 @@ describe('WorkerProcessor', () => {
 
     it('should report ERROR when runner returns generic error outcome', async () => {
       mockGit.prepare.mockResolvedValue('/tmp/repo');
-      mockSpawn.mockReturnValue(makeInstallProcess(0) as unknown as ReturnType<typeof spawn>);
+      mockSpawn
+        .mockReturnValueOnce(makeInstallProcess(0) as unknown as ReturnType<typeof spawn>)
+        .mockReturnValueOnce(makeInstallProcess(0) as unknown as ReturnType<typeof spawn>);
       mockRunner.run.mockResolvedValue({
         outcome: 'error',
         duration: 100,
@@ -191,10 +201,30 @@ describe('WorkerProcessor', () => {
     });
   });
 
+  describe('testDirectory path traversal guard', () => {
+    it('should report ERROR when testDirectory escapes the repo', async () => {
+      mockGit.prepare.mockResolvedValue('/tmp/repo');
+      mockReporter.updateStatus.mockResolvedValue(undefined);
+      mockReporter.reportResult.mockResolvedValue(undefined);
+
+      await processor.handleRunTest(makeJob({ ...baseJobData, testDirectory: '../../etc' }));
+
+      expect(mockReporter.reportResult).toHaveBeenCalledWith(
+        'run-1',
+        expect.objectContaining({
+          status: 'ERROR',
+          errorMessage: 'Invalid testDirectory: must be within the cloned repository',
+        }),
+      );
+    });
+  });
+
   describe('auth token', () => {
     it('should pass auth token to git.prepare', async () => {
       mockGit.prepare.mockResolvedValue('/tmp/repo');
-      mockSpawn.mockReturnValue(makeInstallProcess(0) as unknown as ReturnType<typeof spawn>);
+      mockSpawn
+        .mockReturnValueOnce(makeInstallProcess(0) as unknown as ReturnType<typeof spawn>)
+        .mockReturnValueOnce(makeInstallProcess(0) as unknown as ReturnType<typeof spawn>);
       mockRunner.run.mockResolvedValue({ outcome: 'pass', duration: 100, logs: '' });
       mockReporter.updateStatus.mockResolvedValue(undefined);
       mockReporter.reportResult.mockResolvedValue(undefined);

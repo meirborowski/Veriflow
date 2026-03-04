@@ -54,7 +54,11 @@ export class WorkerProcessor {
       // 1. Clone / pull
       await this.reporter.updateStatus(runId, STATUS.CLONING);
       const repoDir = await this.git.prepare(repoUrl, branch, authToken);
-      const workDir = testDirectory ? path.join(repoDir, testDirectory) : repoDir;
+      const resolvedRepoDir = path.resolve(repoDir);
+      const workDir = testDirectory ? path.resolve(resolvedRepoDir, testDirectory) : resolvedRepoDir;
+      if (workDir !== resolvedRepoDir && !workDir.startsWith(resolvedRepoDir + path.sep)) {
+        throw new Error('Invalid testDirectory: must be within the cloned repository');
+      }
 
       // 2. npm ci
       await this.reporter.updateStatus(runId, STATUS.INSTALLING);
@@ -112,7 +116,7 @@ export class WorkerProcessor {
       const child = spawn(cmd, args, { cwd, stdio: 'inherit' });
       child.on('close', (code: number | null) => {
         if (code === 0) resolve();
-        else reject(new Error(`${cmd} ${args[0]} exited with code ${code ?? 'null'}`));
+        else reject(new Error(`${cmd} ${args.join(' ')} exited with code ${code ?? 'null'}`));
       });
       child.on('error', reject);
     });
