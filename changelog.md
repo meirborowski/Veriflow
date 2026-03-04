@@ -1,5 +1,10 @@
 # Changelog
 
+## 2026-03-04
+
+- test: add Playwright e2e tests for auth pages (login form, register form, validation, error states)
+- chore: add @playwright/test devDependency and test:e2e script to client
+
 ## 2026-03-04 (6c)
 
 - feat: add Phase 6c — Client Automation UI
