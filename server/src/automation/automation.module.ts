@@ -1,6 +1,5 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { BullModule } from '@nestjs/bull';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { AutomationService } from './automation.service';
 import { AutomationController } from './automation.controller';
@@ -16,6 +15,9 @@ import { Attachment } from '../attachments/entities/attachment.entity';
 import { TestExecution } from '../test-execution/entities/test-execution.entity';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { WorkerAuthGuard } from './guards/worker-auth.guard';
+import { RunSpawnerService } from './run-spawner.service';
+import { DockerRunSpawnerService } from './spawners/docker-run-spawner.service';
+import { K8sRunSpawnerService } from './spawners/k8s-run-spawner.service';
 
 @Module({
   imports: [
@@ -31,22 +33,28 @@ import { WorkerAuthGuard } from './guards/worker-auth.guard';
       Bug,
       Attachment,
     ]),
-    BullModule.forRootAsync({
-      imports: [ConfigModule],
-      inject: [ConfigService],
-      useFactory: (config: ConfigService) => ({
-        redis: {
-          host: config.get<string>('REDIS_HOST', 'localhost'),
-          port: config.get<number>('REDIS_PORT', 6379),
-        },
-      }),
-    }),
-    BullModule.registerQueue({
-      name: 'automation',
-    }),
+    ConfigModule,
   ],
   controllers: [AutomationController],
-  providers: [AutomationService, RolesGuard, WorkerAuthGuard],
+  providers: [
+    AutomationService,
+    RolesGuard,
+    WorkerAuthGuard,
+    DockerRunSpawnerService,
+    K8sRunSpawnerService,
+    {
+      provide: RunSpawnerService,
+      useFactory: (
+        config: ConfigService,
+        docker: DockerRunSpawnerService,
+        k8s: K8sRunSpawnerService,
+      ): RunSpawnerService => {
+        const spawnerType = config.get<string>('SPAWNER_TYPE', 'docker');
+        return spawnerType === 'k8s' ? k8s : docker;
+      },
+      inject: [ConfigService, DockerRunSpawnerService, K8sRunSpawnerService],
+    },
+  ],
   exports: [AutomationService],
 })
 export class AutomationModule {}

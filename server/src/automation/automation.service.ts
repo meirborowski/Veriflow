@@ -6,9 +6,8 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';
-import { InjectQueue } from '@nestjs/bull';
-import type { Queue } from 'bull';
 import { ConfigService } from '@nestjs/config';
+import { RunSpawnerService } from './run-spawner.service';
 import { PlaywrightTest } from './entities/playwright-test.entity';
 import { StoryTestLink } from './entities/story-test-link.entity';
 import { AutomationRun } from './entities/automation-run.entity';
@@ -44,8 +43,7 @@ export class AutomationService {
     private readonly configRepository: Repository<ProjectRepoConfig>,
     @InjectRepository(UserStory)
     private readonly storyRepository: Repository<UserStory>,
-    @InjectQueue('automation')
-    private readonly automationQueue: Queue,
+    private readonly runSpawner: RunSpawnerService,
     private readonly configService: ConfigService,
   ) {}
 
@@ -336,17 +334,26 @@ export class AutomationService {
           ? decrypt(repoConfig.authToken, encryptionKey)
           : null;
 
-      await this.automationQueue.add('run-test', {
-        runId: savedRun.id,
-        repoUrl: repoConfig.repoUrl,
-        branch: repoConfig.branch,
-        testDirectory: repoConfig.testDirectory,
-        playwrightConfig: repoConfig.playwrightConfig,
-        testFile: test.testFile,
-        testName: test.testName,
-        baseUrl: dto.baseUrl,
-        authToken: decryptedToken,
-      });
+      try {
+        await this.runSpawner.spawn({
+          runId: savedRun.id,
+          repoUrl: repoConfig.repoUrl,
+          branch: repoConfig.branch,
+          testDirectory: repoConfig.testDirectory,
+          playwrightConfig: repoConfig.playwrightConfig,
+          testFile: test.testFile,
+          testName: test.testName,
+          baseUrl: dto.baseUrl,
+          authToken: decryptedToken,
+        });
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : String(err);
+        this.logger.error(`Failed to spawn run ${savedRun.id}: ${message}`);
+        savedRun.status = AutomationRunStatus.ERROR;
+        savedRun.errorMessage = message;
+        savedRun.completedAt = new Date();
+        await this.runRepository.save(savedRun);
+      }
     }
 
     this.logger.log(

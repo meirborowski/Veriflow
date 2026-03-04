@@ -1,15 +1,8 @@
-services:
-  redis:
-    image: redis:7-alpine
-    restart: unless-stopped
-    ports:
-      - "5379:6379"
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
+networks:
+  veriflow:
+    name: veriflow
 
+services:
   db:
     image: postgres:16-alpine
     restart: unless-stopped
@@ -18,6 +11,8 @@ services:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+    networks:
+      - veriflow
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $POSTGRES_USER -d $POSTGRES_DB"]
       interval: 5s
@@ -34,6 +29,8 @@ services:
       - "9001:9001"
     volumes:
       - miniodata:/data
+    networks:
+      - veriflow
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:9000/minio/health/live || exit 1"]
       interval: 5s
@@ -46,32 +43,35 @@ services:
       dockerfile: Dockerfile.dev
     restart: unless-stopped
     env_file: .env
+    environment:
+      SPAWNER_TYPE: docker
+      RUNNER_IMAGE: veriflow-runner:latest
+      DOCKER_SOCKET: /var/run/docker.sock
+      DOCKER_NETWORK: veriflow
     ports:
       - "3001:3001"
     volumes:
       - ./server:/app
       - /app/node_modules
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - veriflow
     depends_on:
       db:
         condition: service_healthy
       minio:
         condition: service_healthy
-      redis:
-        condition: service_healthy
 
-  worker:
+  # Build-only: pre-build the runner image so Docker spawner can use it locally.
+  # Run: docker build -t veriflow-runner:latest ./worker
+  # Or: docker compose build runner
+  runner:
     build:
       context: ./worker
       dockerfile: Dockerfile
-    restart: unless-stopped
-    env_file: .env
-    volumes:
-      - workerrepos:/tmp/veriflow-repos
-    depends_on:
-      redis:
-        condition: service_healthy
-      server:
-        condition: service_started
+    image: veriflow-runner:latest
+    profiles:
+      - build-only
 
   client:
     build:
@@ -80,16 +80,18 @@ services:
     restart: unless-stopped
     environment:
       - NEXT_PUBLIC_API_URL=http://localhost:3001/api/v1
+      - NEXT_PUBLIC_RUNNER_BASE_URL=http://client:3000
     ports:
       - "3000:3000"
     volumes:
       - ./client:/app
       - /app/node_modules
       - /app/.next
+    networks:
+      - veriflow
     depends_on:
       - server
 
 volumes:
   pgdata:
   miniodata:
-  workerrepos:

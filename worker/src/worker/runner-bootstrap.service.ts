@@ -1,23 +1,9 @@
 import * as path from 'path';
-import { Process, Processor } from '@nestjs/bull';
-import { Logger } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { Job } from 'bull';
 import { GitService } from './git.service';
 import { RunnerService } from './runner.service';
 import { ReporterService } from './reporter.service';
-
-export interface RunTestJobData {
-  runId: string;
-  repoUrl: string;
-  branch: string;
-  testDirectory: string;
-  testFile: string;
-  testName: string;
-  baseUrl: string;
-  playwrightConfig?: string;
-  authToken?: string;
-}
 
 const STATUS = {
   CLONING: 'CLONING',
@@ -29,33 +15,39 @@ const STATUS = {
   TIMEOUT: 'TIMEOUT',
 } as const;
 
-@Processor('automation')
-export class WorkerProcessor {
-  private readonly logger = new Logger(WorkerProcessor.name);
-  private readonly maxRunDurationMs: number;
+@Injectable()
+export class RunnerBootstrapService {
+  private readonly logger = new Logger(RunnerBootstrapService.name);
 
   constructor(
     private readonly git: GitService,
     private readonly runner: RunnerService,
     private readonly reporter: ReporterService,
     private readonly config: ConfigService,
-  ) {
-    this.maxRunDurationMs = config.get<number>('MAX_RUN_DURATION_MS', 600_000);
-  }
+  ) {}
 
-  @Process('run-test')
-  async handleRunTest(job: Job<RunTestJobData>): Promise<void> {
-    const { runId, repoUrl, branch, testDirectory, testFile, testName, baseUrl, playwrightConfig, authToken } =
-      job.data;
+  async run(): Promise<void> {
+    const runId = this.config.getOrThrow<string>('VERIFLOW_RUN_ID');
+    const repoUrl = this.config.getOrThrow<string>('VERIFLOW_REPO_URL');
+    const branch = this.config.getOrThrow<string>('VERIFLOW_BRANCH');
+    const testDirectory = this.config.getOrThrow<string>('VERIFLOW_TEST_DIRECTORY');
+    const testFile = this.config.getOrThrow<string>('VERIFLOW_TEST_FILE');
+    const testName = this.config.getOrThrow<string>('VERIFLOW_TEST_NAME');
+    const baseUrl = this.config.getOrThrow<string>('VERIFLOW_BASE_URL');
+    const playwrightConfig = this.config.get<string>('VERIFLOW_PLAYWRIGHT_CONFIG');
+    const authToken = this.config.get<string>('VERIFLOW_AUTH_TOKEN');
+    const maxRunDurationMs = this.config.get<number>('MAX_RUN_DURATION_MS', 600_000);
 
-    this.logger.log(`Processing run ${runId}: ${testFile} — ${testName}`);
+    this.logger.log(`Starting run ${runId}: ${testFile} — ${testName}`);
 
     try {
       // 1. Clone / pull
       await this.reporter.updateStatus(runId, STATUS.CLONING);
       const repoDir = await this.git.prepare(repoUrl, branch, authToken);
       const resolvedRepoDir = path.resolve(repoDir);
-      const workDir = testDirectory ? path.resolve(resolvedRepoDir, testDirectory) : resolvedRepoDir;
+      const workDir = testDirectory
+        ? path.resolve(resolvedRepoDir, testDirectory)
+        : resolvedRepoDir;
       if (workDir !== resolvedRepoDir && !workDir.startsWith(resolvedRepoDir + path.sep)) {
         throw new Error('Invalid testDirectory: must be within the cloned repository');
       }
@@ -72,7 +64,7 @@ export class WorkerProcessor {
         testName,
         baseUrl,
         playwrightConfig,
-        this.maxRunDurationMs,
+        maxRunDurationMs,
       );
 
       // 4. Report final result
@@ -87,7 +79,12 @@ export class WorkerProcessor {
         });
       } else {
         await this.reporter.reportResult(runId, {
-          status: result.outcome === 'pass' ? STATUS.PASS : result.outcome === 'fail' ? STATUS.FAIL : STATUS.ERROR,
+          status:
+            result.outcome === 'pass'
+              ? STATUS.PASS
+              : result.outcome === 'fail'
+                ? STATUS.FAIL
+                : STATUS.ERROR,
           duration: result.duration,
           completedAt,
           logs: result.logs,
@@ -106,8 +103,9 @@ export class WorkerProcessor {
   }
 
   private install(workDir: string): Promise<void> {
-    return this.spawn('npm', ['ci'], workDir)
-      .then(() => this.spawn('npx', ['playwright', 'install', 'chromium', '--with-deps'], workDir));
+    return this.spawn('npm', ['ci'], workDir).then(() =>
+      this.spawn('npx', ['playwright', 'install', 'chromium', '--with-deps'], workDir),
+    );
   }
 
   private spawn(cmd: string, args: string[], cwd: string): Promise<void> {
