@@ -325,9 +325,86 @@ describe('AutomationService', () => {
       expect(mockRunSpawner.spawn).toHaveBeenCalledWith(
         expect.objectContaining({
           runId: 'run-1',
+          repoUrl: 'https://github.com/org/repo',
+          branch: 'main',
+          testDirectory: 'tests',
+          testFile: 'tests/a.spec.ts',
+          testName: 'Test A',
           baseUrl: 'http://localhost:3000',
         }),
       );
+    });
+
+    it('should continue spawning remaining tests when one spawn fails', async () => {
+      mockConfigService.get.mockReturnValue(null);
+      mockConfigRepo.findOne.mockResolvedValue({
+        repoUrl: 'https://github.com/org/repo',
+        branch: 'main',
+        testDirectory: 'tests',
+        playwrightConfig: null,
+        authToken: null,
+      });
+      mockTestRepo.find.mockResolvedValue([
+        { id: 'test-1', testFile: 'a.spec.ts', testName: 'A', projectId: 'proj-1' },
+        { id: 'test-2', testFile: 'b.spec.ts', testName: 'B', projectId: 'proj-1' },
+      ]);
+
+      const run1 = { id: 'run-1', status: AutomationRunStatus.QUEUED, errorMessage: null as string | null, completedAt: null as Date | null };
+      const run2 = { id: 'run-2', status: AutomationRunStatus.QUEUED, errorMessage: null as string | null, completedAt: null as Date | null };
+      mockRunRepo.create.mockReturnValueOnce(run1).mockReturnValueOnce(run2);
+      mockRunRepo.save.mockImplementation((r: typeof run1) => Promise.resolve(r));
+      mockRunSpawner.spawn
+        .mockRejectedValueOnce(new Error('image not found'))
+        .mockResolvedValueOnce(undefined);
+
+      const result = await service.triggerRun('proj-1', { baseUrl: 'http://localhost' });
+
+      expect(result.runIds).toEqual(['run-1', 'run-2']);
+      expect(mockRunSpawner.spawn).toHaveBeenCalledTimes(2);
+      expect(run1.status).toBe(AutomationRunStatus.ERROR);
+      expect(run2.status).toBe(AutomationRunStatus.QUEUED); // second run unaffected
+    });
+
+    it('should run only the selected testIds when provided', async () => {
+      mockConfigService.get.mockReturnValue(null);
+      mockConfigRepo.findOne.mockResolvedValue({
+        repoUrl: 'https://github.com/org/repo',
+        branch: 'main',
+        testDirectory: 'tests',
+        playwrightConfig: null,
+        authToken: null,
+      });
+      mockTestRepo.find.mockResolvedValue([
+        { id: 'test-1', testFile: 'a.spec.ts', testName: 'A', projectId: 'proj-1' },
+      ]);
+
+      const run = { id: 'run-1' };
+      mockRunRepo.create.mockReturnValue(run);
+      mockRunRepo.save.mockResolvedValue(run);
+      mockRunSpawner.spawn.mockResolvedValue(undefined);
+
+      const result = await service.triggerRun('proj-1', {
+        baseUrl: 'http://localhost',
+        testIds: ['test-1'],
+      });
+
+      expect(result.runIds).toEqual(['run-1']);
+      expect(mockRunSpawner.spawn).toHaveBeenCalledTimes(1);
+    });
+
+    it('should throw NotFoundException when testIds are provided but none match', async () => {
+      mockConfigRepo.findOne.mockResolvedValue({
+        repoUrl: 'https://github.com/org/repo',
+        branch: 'main',
+        testDirectory: 'tests',
+        authToken: null,
+        playwrightConfig: null,
+      });
+      mockTestRepo.find.mockResolvedValue([]);
+
+      await expect(
+        service.triggerRun('proj-1', { baseUrl: 'http://localhost', testIds: ['does-not-exist'] }),
+      ).rejects.toThrow(NotFoundException);
     });
 
     it('should mark run as ERROR and not throw when spawn fails', async () => {

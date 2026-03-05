@@ -3,8 +3,8 @@ import { ConfigService } from '@nestjs/config';
 import { K8sRunSpawnerService } from './k8s-run-spawner.service';
 import type { RunSpawnConfig } from '../run-spawner.service';
 
-const mockCreateNamespacedJob = jest.fn().mockResolvedValue({});
-const mockMakeApiClient = jest.fn().mockReturnValue({ createNamespacedJob: mockCreateNamespacedJob });
+const mockCreateNamespacedJob = jest.fn();
+const mockMakeApiClient = jest.fn();
 const mockLoadFromCluster = jest.fn();
 const mockLoadFromDefault = jest.fn();
 
@@ -40,11 +40,32 @@ function makeConfigService(overrides: Record<string, unknown> = {}): ConfigServi
   return { get: jest.fn((key: string, def?: unknown) => map[key] ?? def) } as unknown as ConfigService;
 }
 
+type JobCall = {
+  namespace: string;
+  body: {
+    metadata: { generateName: string; labels: Record<string, string> };
+    spec: {
+      ttlSecondsAfterFinished: number;
+      backoffLimit: number;
+      template: {
+        spec: {
+          restartPolicy: string;
+          serviceAccountName: string;
+          containers: Array<{ env: Array<{ name: string; value: string }> }>;
+        };
+      };
+    };
+  };
+};
+
 describe('K8sRunSpawnerService', () => {
   let service: K8sRunSpawnerService;
 
   beforeEach(async () => {
     jest.clearAllMocks();
+    // Re-set defaults after clearAllMocks resets implementations
+    mockCreateNamespacedJob.mockResolvedValue({});
+    mockMakeApiClient.mockReturnValue({ createNamespacedJob: mockCreateNamespacedJob });
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -56,21 +77,11 @@ describe('K8sRunSpawnerService', () => {
     service = module.get(K8sRunSpawnerService);
   });
 
-  it('creates a namespaced Job with required env vars', async () => {
+  it('creates a namespaced Job with required spec and env vars', async () => {
     await service.spawn(baseConfig);
 
     expect(mockCreateNamespacedJob).toHaveBeenCalledTimes(1);
-    const call = mockCreateNamespacedJob.mock.calls[0][0] as {
-      namespace: string;
-      body: {
-        metadata: { generateName: string; labels: Record<string, string> };
-        spec: {
-          ttlSecondsAfterFinished: number;
-          backoffLimit: number;
-          template: { spec: { restartPolicy: string; containers: Array<{ env: Array<{ name: string; value: string }> }> } };
-        };
-      };
-    };
+    const call = mockCreateNamespacedJob.mock.calls[0][0] as JobCall;
 
     expect(call.namespace).toBe('veriflow');
     expect(call.body.metadata.generateName).toBe('veriflow-runner-');
@@ -78,6 +89,7 @@ describe('K8sRunSpawnerService', () => {
     expect(call.body.spec.ttlSecondsAfterFinished).toBe(300);
     expect(call.body.spec.backoffLimit).toBe(0);
     expect(call.body.spec.template.spec.restartPolicy).toBe('Never');
+    expect(call.body.spec.template.spec.serviceAccountName).toBe('veriflow-runner');
 
     const env = call.body.spec.template.spec.containers[0].env;
     expect(env).toContainEqual({ name: 'VERIFLOW_RUN_ID', value: 'run-k8s-1' });
@@ -85,12 +97,24 @@ describe('K8sRunSpawnerService', () => {
     expect(env).toContainEqual({ name: 'WORKER_API_KEY', value: 'test-key' });
   });
 
+  it('uses configured ttlSecondsAfterFinished', async () => {
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        K8sRunSpawnerService,
+        { provide: ConfigService, useValue: makeConfigService({ K8S_JOB_TTL_SECONDS: 600 }) },
+      ],
+    }).compile();
+    const svc = module.get(K8sRunSpawnerService);
+    await svc.spawn(baseConfig);
+
+    const call = mockCreateNamespacedJob.mock.calls[0][0] as JobCall;
+    expect(call.body.spec.ttlSecondsAfterFinished).toBe(600);
+  });
+
   it('includes optional env vars when provided', async () => {
     await service.spawn({ ...baseConfig, playwrightConfig: 'playwright.config.ts', authToken: 'gh-token' });
 
-    const call = mockCreateNamespacedJob.mock.calls[0][0] as {
-      body: { spec: { template: { spec: { containers: Array<{ env: Array<{ name: string; value: string }> }> } } } };
-    };
+    const call = mockCreateNamespacedJob.mock.calls[0][0] as JobCall;
     const env = call.body.spec.template.spec.containers[0].env;
     expect(env).toContainEqual({ name: 'VERIFLOW_PLAYWRIGHT_CONFIG', value: 'playwright.config.ts' });
     expect(env).toContainEqual({ name: 'VERIFLOW_AUTH_TOKEN', value: 'gh-token' });
@@ -99,9 +123,7 @@ describe('K8sRunSpawnerService', () => {
   it('omits optional env vars when not provided', async () => {
     await service.spawn(baseConfig);
 
-    const call = mockCreateNamespacedJob.mock.calls[0][0] as {
-      body: { spec: { template: { spec: { containers: Array<{ env: Array<{ name: string }> }> } } } };
-    };
+    const call = mockCreateNamespacedJob.mock.calls[0][0] as JobCall;
     const names = call.body.spec.template.spec.containers[0].env.map((e) => e.name);
     expect(names).not.toContain('VERIFLOW_PLAYWRIGHT_CONFIG');
     expect(names).not.toContain('VERIFLOW_AUTH_TOKEN');
@@ -118,16 +140,30 @@ describe('K8sRunSpawnerService', () => {
     }).compile();
 
     const svc = module.get(K8sRunSpawnerService);
-    await svc.spawn(baseConfig); // triggers lazy getBatchApi()
+    await svc.spawn(baseConfig);
 
     expect(mockLoadFromDefault).toHaveBeenCalled();
+  });
+
+  it('throws when both loadFromCluster and loadFromDefault fail', async () => {
+    mockLoadFromCluster.mockImplementationOnce(() => { throw new Error('not in cluster'); });
+    mockLoadFromDefault.mockImplementationOnce(() => { throw new Error('no kubeconfig found'); });
+
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        K8sRunSpawnerService,
+        { provide: ConfigService, useValue: makeConfigService() },
+      ],
+    }).compile();
+
+    const svc = module.get(K8sRunSpawnerService);
+    await expect(svc.spawn(baseConfig)).rejects.toThrow('no kubeconfig found');
   });
 
   it('caches the BatchV1Api after first spawn', async () => {
     await service.spawn(baseConfig);
     await service.spawn(baseConfig);
 
-    // makeApiClient should only be called once despite two spawns
     expect(mockMakeApiClient).toHaveBeenCalledTimes(1);
   });
 
