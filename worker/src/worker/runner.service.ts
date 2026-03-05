@@ -51,7 +51,7 @@ export class RunnerService {
 
     const env = { ...process.env, BASE_URL: baseUrl, PLAYWRIGHT_JSON_OUTPUT_NAME: '' };
 
-    return new Promise((resolve) => {
+    return new Promise((resolve, reject) => {
       let stdout = '';
       let stderr = '';
       let timedOut = false;
@@ -61,6 +61,11 @@ export class RunnerService {
       child.stdout.on('data', (chunk: Buffer) => { stdout += chunk.toString(); });
       child.stderr.on('data', (chunk: Buffer) => { stderr += chunk.toString(); });
 
+      child.on('error', (err) => {
+        if (timer) clearTimeout(timer);
+        reject(err);
+      });
+
       let timer: ReturnType<typeof setTimeout> | undefined;
       if (timeoutMs) {
         timer = setTimeout(() => {
@@ -69,7 +74,7 @@ export class RunnerService {
         }, timeoutMs);
       }
 
-      child.on('close', () => {
+      child.on('close', (code: number | null) => {
         if (timer) clearTimeout(timer);
         const duration = Date.now() - startedAt;
         const logs = [stdout, stderr].filter(Boolean).join('\n');
@@ -85,8 +90,13 @@ export class RunnerService {
           resolve({ outcome, duration, logs });
         } catch (err: unknown) {
           const message = err instanceof Error ? err.message : String(err);
-          this.logger.error(`Failed to parse Playwright JSON output: ${message}`);
-          resolve({ outcome: 'error', duration, logs, errorMessage: `JSON parse failure: ${message}` });
+          this.logger.error(`Failed to parse Playwright JSON output (exit code ${code ?? 'null'}): ${message}`);
+          resolve({
+            outcome: 'error',
+            duration,
+            logs,
+            errorMessage: `Playwright exited with code ${code ?? 'null'} and produced no parseable JSON. Check logs for details.`,
+          });
         }
       });
     });

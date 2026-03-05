@@ -329,6 +329,12 @@ export class AutomationService {
       const savedRun = await this.runRepository.save(run);
       runIds.push(savedRun.id);
 
+      if (repoConfig.authToken && !encryptionKey) {
+        this.logger.error(
+          `ENCRYPTION_KEY is not set but project ${projectId} has a stored auth token. ` +
+            `Runs requiring repo authentication will fail. Set ENCRYPTION_KEY in the server environment.`,
+        );
+      }
       const decryptedToken =
         repoConfig.authToken && encryptionKey
           ? decrypt(repoConfig.authToken, encryptionKey)

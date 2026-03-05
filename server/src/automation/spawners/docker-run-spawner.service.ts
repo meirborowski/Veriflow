@@ -25,17 +25,26 @@ export class DockerRunSpawnerService extends RunSpawnerService {
   async spawn(config: RunSpawnConfig): Promise<void> {
     const env = this.buildEnv(config);
 
-    const container = await this.docker.createContainer({
-      Image: this.runnerImage,
-      Env: env,
-      HostConfig: {
-        AutoRemove: true,
-        NetworkMode: this.networkName,
-      },
-    });
+    try {
+      const container = await this.docker.createContainer({
+        Image: this.runnerImage,
+        Env: env,
+        HostConfig: {
+          AutoRemove: true,
+          NetworkMode: this.networkName,
+        },
+      });
 
-    await container.start();
-    this.logger.log(`Spawned Docker container for run ${config.runId}`);
+      await container.start();
+      this.logger.log(`Spawned Docker container for run ${config.runId}`);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      this.logger.error(
+        `Docker spawn failed for run ${config.runId} ` +
+          `(image=${this.runnerImage}, network=${this.networkName}): ${message}`,
+      );
+      throw err;
+    }
   }
 
   private buildEnv(config: RunSpawnConfig): string[] {

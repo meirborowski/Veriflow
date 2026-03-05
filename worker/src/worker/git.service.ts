@@ -26,6 +26,10 @@ export class GitService {
       try {
         await git.pull('origin', branch);
       } catch (err: unknown) {
+        this.logger.warn(
+          `git pull failed for cached repo at ${repoDir}. ` +
+            `If the auth token was recently rotated, the cached remote URL may contain a stale token.`,
+        );
         throw this.wrapGitError(err, repoUrl, branch);
       }
     } else {

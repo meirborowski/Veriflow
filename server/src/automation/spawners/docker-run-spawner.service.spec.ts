@@ -3,8 +3,8 @@ import { ConfigService } from '@nestjs/config';
 import { DockerRunSpawnerService } from './docker-run-spawner.service';
 import type { RunSpawnConfig } from '../run-spawner.service';
 
-const mockStart = jest.fn().mockResolvedValue(undefined);
-const mockCreateContainer = jest.fn().mockResolvedValue({ start: mockStart });
+const mockStart = jest.fn();
+const mockCreateContainer = jest.fn();
 
 jest.mock('dockerode', () => {
   return jest.fn().mockImplementation(() => ({
@@ -27,6 +27,9 @@ describe('DockerRunSpawnerService', () => {
 
   beforeEach(async () => {
     jest.clearAllMocks();
+    // Re-set defaults after clearAllMocks resets implementations
+    mockStart.mockResolvedValue(undefined);
+    mockCreateContainer.mockResolvedValue({ start: mockStart });
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -59,7 +62,7 @@ describe('DockerRunSpawnerService', () => {
     const callArg = mockCreateContainer.mock.calls[0][0] as {
       Image: string;
       Env: string[];
-      HostConfig: { AutoRemove: boolean };
+      HostConfig: { AutoRemove: boolean; NetworkMode: string };
     };
     expect(callArg.Image).toBe('veriflow-runner:latest');
     expect(callArg.HostConfig.AutoRemove).toBe(true);
@@ -69,7 +72,9 @@ describe('DockerRunSpawnerService', () => {
     expect(env).toContain('VERIFLOW_RUN_ID=run-1');
     expect(env).toContain('VERIFLOW_REPO_URL=https://github.com/org/repo');
     expect(env).toContain('VERIFLOW_BRANCH=main');
+    expect(env).toContain('VERIFLOW_TEST_DIRECTORY=tests');
     expect(env).toContain('VERIFLOW_TEST_FILE=auth.spec.ts');
+    expect(env).toContain('VERIFLOW_TEST_NAME=should login');
     expect(env).toContain('VERIFLOW_API_URL=http://server:3001/api/v1');
     expect(env).toContain('WORKER_API_KEY=test-key');
 
@@ -77,11 +82,7 @@ describe('DockerRunSpawnerService', () => {
   });
 
   it('includes optional env vars when provided', async () => {
-    await service.spawn({
-      ...baseConfig,
-      playwrightConfig: 'playwright.config.ts',
-      authToken: 'gh-token',
-    });
+    await service.spawn({ ...baseConfig, playwrightConfig: 'playwright.config.ts', authToken: 'gh-token' });
 
     const callArg = mockCreateContainer.mock.calls[0][0] as { Env: string[] };
     expect(callArg.Env).toContain('VERIFLOW_PLAYWRIGHT_CONFIG=playwright.config.ts');
@@ -100,5 +101,10 @@ describe('DockerRunSpawnerService', () => {
   it('throws when Docker createContainer fails', async () => {
     mockCreateContainer.mockRejectedValueOnce(new Error('Docker socket unavailable'));
     await expect(service.spawn(baseConfig)).rejects.toThrow('Docker socket unavailable');
+  });
+
+  it('throws when container.start() fails', async () => {
+    mockStart.mockRejectedValueOnce(new Error('container OOM'));
+    await expect(service.spawn(baseConfig)).rejects.toThrow('container OOM');
   });
 });

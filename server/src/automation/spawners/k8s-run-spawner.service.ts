@@ -71,7 +71,12 @@ export class K8sRunSpawnerService extends RunSpawnerService {
     const kc = new k8sLib.KubeConfig();
     try {
       kc.loadFromCluster();
-    } catch {
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      this.logger.warn(
+        `loadFromCluster() failed (${message}); falling back to loadFromDefault(). ` +
+          `Expected in local dev — indicates a misconfiguration if running in production k8s.`,
+      );
       kc.loadFromDefault();
     }
     this.cachedApi = kc.makeApiClient(k8sLib.BatchV1Api);

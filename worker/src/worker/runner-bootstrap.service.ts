@@ -93,7 +93,8 @@ export class RunnerBootstrapService {
       }
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
-      this.logger.error(`Run ${runId} failed with uncaught error: ${message}`);
+      const stack = err instanceof Error ? err.stack : undefined;
+      this.logger.error(`Run ${runId} failed with uncaught error: ${message}`, stack);
       await this.reporter.reportResult(runId, {
         status: STATUS.ERROR,
         completedAt: new Date().toISOString(),

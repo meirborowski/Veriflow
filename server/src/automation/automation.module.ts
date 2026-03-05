@@ -50,6 +50,11 @@ import { K8sRunSpawnerService } from './spawners/k8s-run-spawner.service';
         k8s: K8sRunSpawnerService,
       ): RunSpawnerService => {
         const spawnerType = config.get<string>('SPAWNER_TYPE', 'docker');
+        if (spawnerType !== 'docker' && spawnerType !== 'k8s') {
+          throw new Error(
+            `Unknown SPAWNER_TYPE="${spawnerType}". Valid values are "docker" or "k8s".`,
+          );
+        }
         return spawnerType === 'k8s' ? k8s : docker;
       },
       inject: [ConfigService, DockerRunSpawnerService, K8sRunSpawnerService],
