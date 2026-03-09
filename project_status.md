@@ -1,7 +1,7 @@
 # Veriflow — Project Status
 
 ## Current Phase
-**Phase 5 — Polish** (Complete)
+**Phase 6 — Playwright Automation Integration** (In Progress)
 
 ## Phase Progress
 
@@ -138,38 +138,38 @@
 #### Automation — Server
 | Task | Status | Notes |
 |---|---|---|
-| PlaywrightTest entity | Not Started | UUID PK, FK to Project, externalId unique per project |
-| StoryTestLink entity (N:N join) | Not Started | FK to UserStory + PlaywrightTest, linkedBy enum (USER/AUTO_DISCOVERY) |
-| AutomationRun entity | Not Started | Append-only run log, FK to PlaywrightTest + optional Release |
-| ProjectRepoConfig entity | Not Started | Git repo URL, branch, test dir, encrypted auth token per project |
-| New enums: AutomationRunStatus, AutomationTrigger, LinkSource | Not Started | |
-| Automation module (service, controller, DTOs) | Not Started | |
-| Registry sync endpoint (POST /projects/:id/automation/registry/sync) | Not Started | External projects push test catalog |
-| Test CRUD endpoints (list, get, delete) | Not Started | |
-| Story-test linking endpoints (link, unlink) | Not Started | |
-| Automation trigger endpoint (POST /projects/:id/automation/trigger) | Not Started | Dispatches jobs to test worker via Bull queue |
-| Automation run reporting endpoint (POST /projects/:id/automation/runs) | Not Started | CI/CD pushes results |
-| Automation run query endpoints (list, get, status) | Not Started | Includes poll-based status endpoint |
-| Story automation summary endpoint (GET /stories/:id/automation/summary) | Not Started | Conflict detection logic |
+| PlaywrightTest entity | Done | UUID PK, FK to Project, externalId unique per project, tags array, lastSyncedAt |
+| StoryTestLink entity (N:N join) | Done | FK to UserStory + PlaywrightTest, linkedBy enum (USER/AUTO_DISCOVERY), unique (storyId, testId) |
+| AutomationRun entity | Done | Append-only run log, FK to PlaywrightTest + optional Release, indices on (projectId, testId) and (projectId, status) |
+| ProjectRepoConfig entity | Done | Git repo URL, branch, testDirectory, playwrightConfig, encrypted authToken |
+| New enums: AutomationRunStatus, AutomationTrigger, LinkSource | Done | AutomationRunStatus has 10 values; all enums in common/types/enums.ts |
+| Automation module (service, controller, DTOs) | Done | 15-method service, 14-endpoint controller, 7 DTO files, WorkerAuthGuard |
+| Registry sync endpoint (POST /projects/:id/automation/registry/sync) | Done | Upserts test catalog; deletes removed tests |
+| Test CRUD endpoints (list, get, delete) | Done | Paginated list with search + tag + link filters |
+| Story-test linking endpoints (link, unlink) | Done | Bulk link by testIds; single unlink |
+| Automation trigger endpoint (POST /projects/:id/automation/trigger) | Done | Dispatches directly to Docker/K8s spawner (no Bull queue) |
+| Automation run reporting endpoint (POST /projects/:id/automation/runs) | Done | CI/CD pushes final results |
+| Automation run query endpoints (list, get, status) | Done | Paginated list, detail, poll-based status endpoint |
+| Story automation summary endpoint (GET /stories/:id/automation/summary) | Done | Latest run per linked test, conflict detection |
 | Tunnel registration endpoint (POST /projects/:id/automation/tunnel) | Not Started | Register/teardown tunnel sessions |
-| RolesGuard extension for automation routes | Not Started | @ResolveProjectFrom('test'), @ResolveProjectFrom('run') |
-| Unit tests | Not Started | |
+| RolesGuard extension for automation routes | Done | @ResolveProjectFrom('test'), @ResolveProjectFrom('run') |
+| Unit tests | Done | Service, controller, Docker spawner, K8s spawner specs |
 
 #### Automation — Test Worker Service
 | Task | Status | Notes |
 |---|---|---|
-| Worker service scaffolding | Not Started | Separate NestJS app or standalone Node.js service |
-| Docker container with Playwright + browsers | Not Started | Pre-built image with Node.js + Playwright browsers |
-| Bull queue consumer (job processing) | Not Started | Listen for jobs from API, execute tests |
-| Git clone + caching logic | Not Started | Clone repo, cache for repeated runs, pull updates |
-| Dependency installation (`npm ci`) | Not Started | Isolated per-run working directory |
-| Playwright test execution | Not Started | Run with JSON reporter, configurable baseUrl |
-| Result parser (JSON → AutomationRun) | Not Started | Parse Playwright JSON output into run results |
-| Result reporter (Worker → API) | Not Started | POST results back to Veriflow API |
-| Run timeout + cancellation | Not Started | Kill process after configurable max duration |
-| Concurrency management | Not Started | Limit simultaneous runs per worker instance |
-| Docker Compose integration | Not Started | Add worker service to docker-compose.yml |
-| Redis service for Bull queue | Not Started | Add Redis to docker-compose.yml |
+| Worker service scaffolding | Done | Standalone NestJS app in `worker/` |
+| Docker container with Playwright + browsers | Done | Two-stage Dockerfile; mcr.microsoft.com/playwright:noble base image |
+| Bull queue consumer (job processing) | Not Started | Worker is driven by env vars at container start, not a queue consumer |
+| Git clone + caching logic | Done | SHA-256 cache key on repo+branch; clone or pull on cache miss/hit |
+| Dependency installation (`npm ci`) | Done | Runs `npm ci` + `npx playwright install chromium` before test run |
+| Playwright test execution | Done | Spawns `npx playwright test` with JSON reporter; configurable timeout (default 600s) |
+| Result parser (JSON → AutomationRun) | Done | Parses Playwright JSON reporter output into RunOutcome |
+| Result reporter (Worker → API) | Done | PATCH `/automation/runs/:id/status` with x-worker-api-key header |
+| Run timeout + cancellation | Done | Configurable timeout; kills process on expiry |
+| Concurrency management | Not Started | No per-worker concurrency limit; each container runs one job |
+| Docker Compose integration | Done | `runner` build profile in docker-compose.yml; server mounts Docker socket |
+| Redis service for Bull queue | Not Started | No Bull queue; not required for current spawner approach |
 
 #### Automation — Veriflow CLI (Tunnel)
 | Task | Status | Notes |
@@ -184,9 +184,9 @@
 #### Automation — Client
 | Task | Status | Notes |
 |---|---|---|
-| Automation types | Not Started | PlaywrightTest, StoryTestLink, AutomationRun, enums |
-| TanStack Query hooks | Not Started | useAutomationTests, useAutomationRuns, useStoryAutomation, mutations |
-| AutomationStatusBadge component | Not Started | Pass=green, Fail=red, Error=orange, Skipped=gray |
+| Automation types | Done | PlaywrightTest, StoryTestLink, AutomationRun, enums, TERMINAL_STATUSES |
+| TanStack Query hooks | Done | 11 hooks: useTests, useTest, useDeleteTest, useLinkTests, useUnlinkTest, useAutomationSummary, useTriggerRun, useRuns, useRun, useRunStatus, useRepoConfig, useUpsertRepoConfig |
+| AutomationStatusBadge component | Done | automation-run-status-badge.tsx; all 10 statuses with dot + label |
 | ConflictIndicator component | Not Started | Warning badge when manual vs automation disagree |
 | Story detail: automation panel | Not Started | Summary card, linked tests list, recent runs, conflict flag |
 | Automation tests list page | Not Started | Table with filters, link status, last run |
