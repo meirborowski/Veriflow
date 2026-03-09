@@ -143,16 +143,16 @@
 | AutomationRun entity | Done | Append-only run log, FK to PlaywrightTest + optional Release, indices on (projectId, testId) and (projectId, status) |
 | ProjectRepoConfig entity | Done | Git repo URL, branch, testDirectory, playwrightConfig, encrypted authToken |
 | New enums: AutomationRunStatus, AutomationTrigger, LinkSource | Done | AutomationRunStatus has 10 values; all enums in common/types/enums.ts |
-| Automation module (service, controller, DTOs) | Done | 15-method service, 14-endpoint controller, 7 DTO files, WorkerAuthGuard |
-| Registry sync endpoint (POST /projects/:id/automation/registry/sync) | Done | Upserts test catalog; deletes removed tests |
+| Automation module (service, controller, DTOs) | Done | 15-method service, 15-endpoint controller, 7 DTO files, WorkerAuthGuard |
+| Registry sync endpoint (POST /projects/:projectId/automation/registry/sync) | Done | Upserts test catalog; deletes removed tests |
 | Test CRUD endpoints (list, get, delete) | Done | Paginated list with search + tag + link filters |
 | Story-test linking endpoints (link, unlink) | Done | Bulk link by testIds; single unlink |
-| Automation trigger endpoint (POST /projects/:id/automation/trigger) | Done | Dispatches directly to Docker/K8s spawner (no Bull queue) |
-| Automation run reporting endpoint (POST /projects/:id/automation/runs) | Done | CI/CD pushes final results |
+| Automation trigger endpoint (POST /projects/:projectId/automation/trigger) | Done | Dispatches directly to Docker/K8s spawner (no Bull queue) |
+| Automation run reporting endpoint (POST /projects/:projectId/automation/runs) | Done | CI/CD pushes final results |
 | Automation run query endpoints (list, get, status) | Done | Paginated list, detail, poll-based status endpoint |
-| Story automation summary endpoint (GET /stories/:id/automation/summary) | Done | Latest run per linked test, conflict detection |
-| Tunnel registration endpoint (POST /projects/:id/automation/tunnel) | Not Started | Register/teardown tunnel sessions |
-| RolesGuard extension for automation routes | Done | @ResolveProjectFrom('test'), @ResolveProjectFrom('run') |
+| Story automation summary endpoint (GET /stories/:storyId/automation/summary) | Done | Latest run per linked test, conflict detection |
+| Tunnel registration endpoint (POST /projects/:projectId/automation/tunnel) | Not Started | Register/teardown tunnel sessions |
+| RolesGuard extension for automation routes | Done | @ResolveProjectFrom('automation-test'), @ResolveProjectFrom('automation-run') |
 | Unit tests | Done | Service, controller, Docker spawner, K8s spawner specs |
 
 #### Automation — Test Worker Service
@@ -220,4 +220,4 @@ None currently.
 | 2026-03-02 | Dedicated test worker service | Playwright execution runs in a separate microservice, not on the main API server — isolation + scalability |
 | 2026-03-02 | Git clone for test source | Worker clones the project's git repo to get Playwright test files — keeps tests in their native repo |
 | 2026-03-02 | Built-in tunnel for local apps | Veriflow CLI creates a secure WebSocket tunnel so the test worker can reach localhost apps |
-| 2026-03-02 | Bull (Redis) job queue | API dispatches test execution jobs to workers via Bull queue — reliable, supports concurrency limits |
+| 2026-03-02 | Direct spawner over Bull queue | API dispatches test runs directly to Docker/K8s spawner — simpler, no Redis dependency; each run gets an ephemeral container |
